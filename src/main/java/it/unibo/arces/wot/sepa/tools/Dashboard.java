@@ -77,6 +77,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JSplitPane;
 
 import it.unibo.arces.wot.sepa.pattern.JSAP;
+import it.unibo.arces.wot.sepa.pattern.DTNGenericClient;
 import it.unibo.arces.wot.sepa.pattern.GenericClient;
 import it.unibo.arces.wot.sepa.api.ISubscriptionHandler;
 import it.unibo.arces.wot.sepa.api.SPARQL11SEProperties.SubscriptionProtocol;
@@ -125,11 +126,15 @@ public class Dashboard {
 	private static final String versionLabel = "SEPA Dashboard Ver 0.9.6";
 
 	private GenericClient sepaClient;
+	private DTNGenericClient sepaDTNClient;
+	
+	private boolean DTNEnabled = false; 
+	
 	private DashboardHandler handler = new DashboardHandler();
 	private JSAP appProfile;
 	private Properties appProperties = new Properties();
 	private AuthenticationProperties oauth = null;
-
+	
 	private DefaultTableModel namespacesDM;
 	private String namespacesHeader[] = new String[] { "Prefix", "URI" };
 
@@ -248,7 +253,8 @@ public class Dashboard {
 			sub.setName(queryList.getSelectedValue());
 
 			// Query label
-			JLabel queryLabel = new JLabel("<html>" + querySPARQL.getText() + "</html>");
+			JLabel queryLabel = new JLabel(
+					"<html>" + querySPARQL.getText() + "</html>");
 			queryLabel.setFont(new Font("Arial", Font.BOLD, 14));
 
 			// Info label
@@ -262,7 +268,7 @@ public class Dashboard {
 			unsubscribeButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
-						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()));
+						getSepaClient().unsubscribe(spuid,Integer.parseInt(timeout.getText()));
 					} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException
 							| SEPAProtocolException e1) {
 						logger.error(e1.getMessage());
@@ -297,9 +303,9 @@ public class Dashboard {
 
 			subscriptionsPanel.setSelectedIndex(subscriptionsPanel.getTabCount() - 1);
 			mainTabs.setSelectedIndex(1);
-
+			
 			subscriptions.put(spuid, sub);
-
+			
 		}
 
 		@Override
@@ -308,7 +314,7 @@ public class Dashboard {
 			subscriptions.remove(spuid);
 			subscriptionResultsDM.remove(spuid);
 			subscriptionResultsLabels.remove(spuid);
-			subscriptionResultsTables.remove(spuid);
+			subscriptionResultsTables.remove(spuid);	
 		}
 	}
 
@@ -474,13 +480,11 @@ public class Dashboard {
 		private boolean added = true;
 		private String value;
 		private boolean literal = true;
-		private String dataType = null;
 
-		public BindingValue(String value, boolean literal, String dataType, boolean added) {
+		public BindingValue(String value, boolean literal, boolean added) {
 			this.value = value;
 			this.added = added;
 			this.literal = literal;
-			this.dataType = dataType;
 		}
 
 		public boolean isAdded() {
@@ -490,10 +494,6 @@ public class Dashboard {
 
 		public String get() {
 			return value;
-		}
-
-		public String getDataType() {
-			return dataType;
 		}
 
 		public boolean isLiteral() {
@@ -536,8 +536,7 @@ public class Dashboard {
 				for (Bindings sol : res.getRemovedBindings().getBindings()) {
 					HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
 					for (String var : sol.getVariables()) {
-						row.put(var,
-								new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), false));
+						row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), false));
 					}
 					rows.add(row);
 				}
@@ -547,8 +546,7 @@ public class Dashboard {
 				for (Bindings sol : res.getAddedBindings().getBindings()) {
 					HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
 					for (String var : sol.getVariables()) {
-						row.put(var,
-								new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
+						row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), true));
 					}
 					rows.add(row);
 				}
@@ -628,14 +626,14 @@ public class Dashboard {
 			for (Bindings sol : bindingsResults.getBindings()) {
 				HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
 				for (String var : sol.getVariables()) {
-					row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
+					row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), true));
 				}
 				rows.add(row);
 			}
-
+			
 			if (subscriptionResultsTables.get(spuid) != null)
-				subscriptionResultsTables.get(spuid)
-						.changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1, 0, false, false);
+				subscriptionResultsTables.get(spuid).changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1,
+					0, false, false);
 
 			super.fireTableDataChanged();
 		}
@@ -658,9 +656,7 @@ public class Dashboard {
 				String v = (String) table.getValueAt(row, 1);
 				String type = (String) table.getValueAt(row, 2);
 				logger.trace("Row: " + row + " Col: " + col + " Value: " + v + " Type: " + type);
-				if (type == null)
-					l.setBackground(Color.WHITE);
-				else if (checkType(v, type)) {
+				if (checkType(v, type)) {
 					if (v.equals(""))
 						l.setBackground(Color.ORANGE);
 					else
@@ -694,31 +690,18 @@ public class Dashboard {
 			showAsQname = set;
 		}
 
-		private String qName(String value, boolean literal, String dataType) {
+		private String qName(String uri) {
 			if (namespaces == null)
-				return value;
-			if (value == null)
+				return uri;
+			if (uri == null)
 				return null;
-
-			if (!literal) {
-				for (int row = 0; row < namespaces.getRowCount(); row++) {
-					String prefix = namespaces.getValueAt(row, 0).toString();
-					String ns = namespaces.getValueAt(row, 1).toString();
-					if (value.startsWith(ns))
-						return value.replace(ns, prefix + ":");
-				}
-			} else if (dataType != null) {
-				for (int row = 0; row < namespaces.getRowCount(); row++) {
-					String prefix = namespaces.getValueAt(row, 0).toString();
-					String ns = namespaces.getValueAt(row, 1).toString();
-					if (dataType.startsWith(ns)) {
-						dataType = dataType.replace(ns, prefix + ":");
-						break;
-					}
-				}
-				return value + "^^" + dataType;
+			for (int row = 0; row < namespaces.getRowCount(); row++) {
+				String prefix = namespaces.getValueAt(row, 0).toString();
+				String ns = namespaces.getValueAt(row, 1).toString();
+				if (uri.startsWith(ns))
+					return uri.replace(ns, prefix + ":");
 			}
-			return value;
+			return uri;
 		}
 
 		@Override
@@ -759,9 +742,7 @@ public class Dashboard {
 
 			// Render as qname or URI
 			if (showAsQname)
-				setText(qName(binding.get(), binding.isLiteral(), binding.getDataType()));
-			else if (binding.isLiteral() && binding.getDataType() != null)
-				setText(binding.get() + "^^" + binding.getDataType());
+				setText(qName(binding.get()));
 			else
 				setText(binding.get());
 
@@ -892,7 +873,7 @@ public class Dashboard {
 				return false;
 			}
 			try {
-				sm = new SEPASecurityManager(jksName, jksPass, keyPass, oauth);
+				sm = new SEPASecurityManager(jksName, jksPass, keyPass,oauth);
 				sepaClient = new GenericClient(appProfile, sm);
 			} catch (SEPAProtocolException | SEPASecurityException e) {
 				logger.error(e.getMessage());
@@ -900,16 +881,24 @@ public class Dashboard {
 			}
 			btnRegister.setEnabled(true);
 			userID.setEnabled(true);
-		} else {
+		}
+		else {
 			btnRegister.setEnabled(false);
 			userID.setEnabled(false);
-
+			
 			try {
 				sepaClient = new GenericClient(appProfile);
 			} catch (SEPAProtocolException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
+		}
+		
+		try {
+			sepaDTNClient = new DTNGenericClient(appProfile);
+		} catch (SEPAProtocolException e) {
+			logger.error(e.getMessage());
+			return false;
 		}
 
 		return true;
@@ -927,8 +916,7 @@ public class Dashboard {
 
 		@Override
 		public boolean accept(File f) {
-			if (f.isDirectory())
-				return true;
+			if (f.isDirectory()) return true;
 			for (String ext : extensions)
 				if (f.getName().contains(ext))
 					return true;
@@ -1399,7 +1387,7 @@ public class Dashboard {
 		timeout.setText("5000");
 		timeout.setColumns(10);
 
-		JLabel lblToms = new JLabel("Timeout (ms)");
+		JLabel lblToms = new JLabel(getTimeoutText());
 		GridBagConstraints gbc_lblToms = new GridBagConstraints();
 		gbc_lblToms.anchor = GridBagConstraints.EAST;
 		gbc_lblToms.gridx = 3;
@@ -1457,8 +1445,7 @@ public class Dashboard {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					subscribe();
-				} catch (IOException | SEPAPropertiesException | NumberFormatException | SEPAProtocolException
-						| SEPASecurityException | SEPABindingsException e1) {
+				} catch (IOException | SEPAPropertiesException | NumberFormatException | SEPAProtocolException | SEPASecurityException | SEPABindingsException e1) {
 					logger.error(e1.getMessage());
 				}
 			}
@@ -1633,6 +1620,21 @@ public class Dashboard {
 			}
 		});
 		chckbxQname.setSelected(true);
+		
+		JCheckBox chckbxDTN = new JCheckBox("DTN");
+		GridBagConstraints gbc_chckbxDTN = new GridBagConstraints();
+		gbc_chckbxDTN.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxDTN.gridx = 3;
+		gbc_chckbxDTN.gridy = 0;
+		infoPanel.add(chckbxDTN, gbc_chckbxDTN);
+		chckbxDTN.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				DTNEnabled = chckbxDTN.isSelected();
+				lblToms.setText(getTimeoutText());
+			}
+		});
+		chckbxDTN.setSelected(false);
 
 		JButton btnNewButton = new JButton("Clear results");
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
@@ -1675,13 +1677,27 @@ public class Dashboard {
 		}
 	}
 
-	protected void subscribe() throws IOException, SEPAPropertiesException, NumberFormatException,
-			SEPAProtocolException, SEPASecurityException, SEPABindingsException {
+	protected void subscribe() throws IOException, SEPAPropertiesException, NumberFormatException, SEPAProtocolException, SEPASecurityException, SEPABindingsException {
 		Bindings bindings = new Bindings();
 		for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
-			String type;
-			if (queryForcedBindings.getValueAt(row, 2) == null) type = "xsd:string"; 
-			else type = queryForcedBindings.getValueAt(row, 2).toString();
+			String type = queryForcedBindings.getValueAt(row, 2).toString();
+			String value = queryForcedBindings.getValueAt(row, 1).toString();
+			String variable = queryForcedBindings.getValueAt(row, 0).toString();
+			if (type.toUpperCase().equals("URI"))
+				bindings.addBinding(variable, new RDFTermURI(value));
+			else if (type.toUpperCase().equals("BNODE"))
+				bindings.addBinding(variable, new RDFTermBNode(value));
+			else
+				bindings.addBinding(variable, new RDFTermLiteral(value, type));
+		}
+		
+		getSepaClient().subscribe(queryID, querySPARQL.getText(), bindings, handler,Integer.parseInt(timeout.getText()));
+	}
+
+	protected void query() throws SEPAPropertiesException, SEPABindingsException {
+		Bindings bindings = new Bindings();
+		for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
+			String type = queryForcedBindings.getValueAt(row, 2).toString();
 			String value = queryForcedBindings.getValueAt(row, 1).toString();
 			String variable = queryForcedBindings.getValueAt(row, 0).toString();
 			if (type.toUpperCase().equals("URI"))
@@ -1692,29 +1708,9 @@ public class Dashboard {
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
 		}
 
-		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, handler, Integer.parseInt(timeout.getText()));
-	}
-
-	protected void query() throws SEPAPropertiesException, SEPABindingsException {
-		Bindings bindings = new Bindings();
-		for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
-			String type = null;
-			if (queryForcedBindings.getValueAt(row, 2) != null) type = queryForcedBindings.getValueAt(row, 2).toString();
-			String value = queryForcedBindings.getValueAt(row, 1).toString();
-			String variable = queryForcedBindings.getValueAt(row, 0).toString();
-			
-			if (type == null) bindings.addBinding(variable, new RDFTermLiteral(value));
-			else if (type.toUpperCase().equals("URI"))
-				bindings.addBinding(variable, new RDFTermURI(value));
-			else if (type.toUpperCase().equals("BNODE"))
-				bindings.addBinding(variable, new RDFTermBNode(value));
-			else
-				bindings.addBinding(variable, new RDFTermLiteral(value, type));
-		}
-
 		try {
 			Instant start = Instant.now();
-			Response ret = sepaClient.query(queryID, querySPARQL.getText(), bindings,
+			Response ret = getSepaClient().query(queryID, querySPARQL.getText(), bindings,
 					Integer.parseInt(timeout.getText()));
 			Instant stop = Instant.now();
 			if (ret.isError()) {
@@ -1722,7 +1718,8 @@ public class Dashboard {
 				queryInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
 			} else {
 				QueryResponse results = (QueryResponse) ret;
-				logger.info(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
+				if (results.getBindingsResults() != null)
+					logger.info(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
 						(stop.toEpochMilli() - start.toEpochMilli())));
 				queryInfo.setText(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
 						(stop.toEpochMilli() - start.toEpochMilli())));
@@ -1737,9 +1734,7 @@ public class Dashboard {
 	protected void update() throws SEPAPropertiesException, SEPABindingsException {
 		Bindings bindings = new Bindings();
 		for (int row = 0; row < updateForcedBindings.getRowCount(); row++) {
-			String type;
-			if (updateForcedBindings.getValueAt(row, 2) == null) type = "xsd:string"; 
-			else type = updateForcedBindings.getValueAt(row, 2).toString();
+			String type = updateForcedBindings.getValueAt(row, 2).toString();
 			String value = updateForcedBindings.getValueAt(row, 1).toString();
 			String variable = updateForcedBindings.getValueAt(row, 0).toString();
 			if (type.equals("URI"))
@@ -1752,7 +1747,7 @@ public class Dashboard {
 
 		try {
 			Instant start = Instant.now();
-			Response ret = sepaClient.update(updateID, updateSPARQL.getText(), bindings,
+			Response ret = getSepaClient().update(updateID, updateSPARQL.getText(), bindings,
 					Integer.parseInt(timeout.getText()));
 			Instant stop = Instant.now();
 			if (ret.isError()) {
@@ -1771,7 +1766,7 @@ public class Dashboard {
 		if (id == null)
 			return;
 		updateID = id;
-		JSAP app = sepaClient.getApplicationProfile();
+		JSAP app = getSepaClient().getApplicationProfile();
 		updateSPARQL.setText(app.getSPARQLUpdate(id));
 
 		Bindings bindings = app.getUpdateBindings(id);
@@ -1808,7 +1803,7 @@ public class Dashboard {
 			return;
 
 		queryID = id;
-		JSAP app = sepaClient.getApplicationProfile();
+		JSAP app = getSepaClient().getApplicationProfile();
 		querySPARQL.setText(app.getSPARQLQuery(id));
 
 		Bindings bindings = app.getQueryBindings(id);
@@ -1852,9 +1847,6 @@ public class Dashboard {
 	}
 
 	private boolean checkType(String value, String type) {
-		if (type == null)
-			return true;
-
 		try {
 			switch (type) {
 			case "URI":
@@ -1917,9 +1909,7 @@ public class Dashboard {
 			return;
 		else {
 			for (int row = 0; row < updateForcedBindings.getRowCount(); row++) {
-				String type = null;
-				if (updateForcedBindings.getValueAt(row, 2) != null)
-					type = updateForcedBindings.getValueAt(row, 2).toString();
+				String type = updateForcedBindings.getValueAt(row, 2).toString();
 				String value = updateForcedBindings.getValueAt(row, 1).toString();
 				if (!checkType(value, type))
 					return;
@@ -1935,10 +1925,7 @@ public class Dashboard {
 			return;
 		else {
 			for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
-				String type = null;
-
-				if (queryForcedBindings.getValueAt(row, 2) != null)
-					type = queryForcedBindings.getValueAt(row, 2).toString();
+				String type = queryForcedBindings.getValueAt(row, 2).toString();
 				String value = queryForcedBindings.getValueAt(row, 1).toString();
 				if (!checkType(value, type))
 					return;
@@ -1947,4 +1934,13 @@ public class Dashboard {
 		btnQuery.setEnabled(true);
 		subscribeButton.setEnabled(true);
 	}
+	
+	private GenericClient getSepaClient() {
+		return (this.DTNEnabled ? this.sepaDTNClient : this.sepaClient);
+	}
+	
+	private String getTimeoutText() {
+		return (this.DTNEnabled ? "Timeout (s)" : "Timeout (ms)");
+	}
+	
 }
