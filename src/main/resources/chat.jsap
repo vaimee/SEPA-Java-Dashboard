@@ -10,6 +10,23 @@
 		"expires": "+s6urz6vJqZ1sS/SK8+LpA==",
 		"type": "vvcpMsVLTnhHZ0KnT5PchA=="
 	},
+	"dtnprotocol": {
+		"schema": "ipn",
+		"availableSchemas": {
+			"ipn": {
+				"destination": "100",
+				"updatedemux": 150,
+				"querydemux": 151,
+				"subscribedemux": 152 
+			},
+			"dtn": {
+				"destination": "destmachine",
+				"updatedemux": "/sepa/update",
+				"querydemux": "/sepa/query",
+				"subscribedemux": "/sepa/subscription"
+			}
+		}
+	},
 	"sparql11protocol": {
 		"protocol": "http",
 		"port": 8000,
