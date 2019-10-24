@@ -116,17 +116,17 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-public class Dashboard {
+public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
 
 	static Dashboard window;
 
-	private static final String versionLabel = "SEPA Dashboard Ver 0.9.6";
-
 	private GenericClient sepaClient;
 	private DashboardHandler handler = new DashboardHandler();
-	private JSAP appProfile;
+	private JSAP appProfile = null;
 	private Properties appProperties = new Properties();
 	private AuthenticationProperties oauth = null;
 
@@ -185,18 +185,21 @@ public class Dashboard {
 	private String jksName = "sepa.jks";
 	private String jksPass = "sepa2017";
 	private String keyPass = "sepa2017";
-
-	private JTextField userID;
 	private JButton btnQuery;
 	private JLabel updateInfo;
 	private JLabel queryInfo;
-
-	private JButton btnRegister;
-
+	
+	JCheckBox chckbxMerge;
+	
 	private SEPASecurityManager sm;
 
 	private JTabbedPane subscriptionsPanel = new JTabbedPane(JTabbedPane.TOP);
-
+	
+	private Login login = null;
+	private JButton btnLogout;
+	
+	private ArrayList<String> jsapFiles = new ArrayList<String>();
+	
 	class DashboardHandler implements ISubscriptionHandler {
 		@Override
 		public void onSemanticEvent(Notification n) {
@@ -800,10 +803,10 @@ public class Dashboard {
 	public Dashboard() {
 		initialize();
 
-		loadSAP(null);
+		loadSAP(null, true);
 	}
 
-	private boolean loadSAP(String file) {
+	private boolean loadSAP(String file, boolean load) {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
@@ -853,17 +856,44 @@ public class Dashboard {
 				logger.error("Path in dashboard.properties is null");
 				return false;
 			}
-			file = path;
+			
+			String[] jsaps = path.split(",");
+			for (int i = 0; i < jsaps.length; i++) jsapFiles.add(jsaps[i]);
+			
+			try {
+				appProfile = new JSAP(jsapFiles.get(0));
+			} catch (SEPAPropertiesException | SEPASecurityException e) {
+				logger.error(e.getMessage());
+				return false;
+			}
+			
+			if (jsapFiles.size() > 1) {
+				for (int i=1; i < jsaps.length; i++) {
+					try {
+						appProfile.read(jsapFiles.get(i), true);
+					} catch (IOException e) {
+						logger.error(e.getMessage());
+						return false;
+					}
+				}
+			}
 		}
-
-		try {
-			appProfile = new JSAP(file);
-		} catch (SEPAPropertiesException | SEPASecurityException e) {
-			logger.error(e.getMessage());
-			return false;
+		else {
+			try {
+				if (load) {
+					appProfile = new JSAP(file);
+					jsapFiles.clear();
+					jsapFiles.add(file);
+				}
+				else if (appProfile != null) {
+					appProfile.read(file, true);
+					jsapFiles.add(file);
+				}
+			} catch (SEPAPropertiesException | SEPASecurityException | IOException e) {
+				logger.error(e.getMessage());
+				return false;
+			}	
 		}
-
-		frmSepaDashboard.setTitle(versionLabel + " - " + file);
 
 		// Loading namespaces
 		for (String prefix : appProfile.getPrefixes()) {
@@ -893,17 +923,22 @@ public class Dashboard {
 			}
 			try {
 				sm = new SEPASecurityManager(jksName, jksPass, keyPass, oauth);
-				sepaClient = new GenericClient(appProfile, sm);
-			} catch (SEPAProtocolException | SEPASecurityException e) {
+			} catch (SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
-			btnRegister.setEnabled(true);
-			userID.setEnabled(true);
+			
+			try {
+				sepaClient = new GenericClient(appProfile, sm);
+			} catch (SEPAProtocolException e) {
+				logger.error(e.getMessage());
+				return false;
+			}
+			
+			login = new Login(sm,this,frmSepaDashboard);
+			login.setVisible(true);
 		} else {
-			btnRegister.setEnabled(false);
-			userID.setEnabled(false);
-
+						
 			try {
 				sepaClient = new GenericClient(appProfile);
 			} catch (SEPAProtocolException e) {
@@ -967,14 +1002,14 @@ public class Dashboard {
 		propertiesDM.setColumnIdentifiers(propertiesHeader);
 
 		frmSepaDashboard = new JFrame();
-		frmSepaDashboard.setTitle(versionLabel);
+		frmSepaDashboard.setTitle("SEPA Dashboard Ver 0.9.9");
 		frmSepaDashboard.setBounds(100, 100, 925, 768);
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 925, 0 };
 		gridBagLayout.rowHeights = new int[] { 500, 129, 39, 0 };
 		gridBagLayout.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gridBagLayout.rowWeights = new double[] { 1.0, 0.0, 0.0, Double.MIN_VALUE };
+		gridBagLayout.rowWeights = new double[] { 1.0, 1.0, 0.0, Double.MIN_VALUE };
 		frmSepaDashboard.getContentPane().setLayout(gridBagLayout);
 
 		mainTabs = new JTabbedPane(JTabbedPane.TOP);
@@ -990,7 +1025,7 @@ public class Dashboard {
 		mainTabs.setEnabledAt(0, true);
 		GridBagLayout gbl_sparqlTab = new GridBagLayout();
 		gbl_sparqlTab.columnWidths = new int[] { 233, 0, 0 };
-		gbl_sparqlTab.rowHeights = new int[] { 0, 155, 82, 47, 172, 0 };
+		gbl_sparqlTab.rowHeights = new int[] { 0, 155, 82, 29, 172, 0 };
 		gbl_sparqlTab.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
 		gbl_sparqlTab.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 1.0, Double.MIN_VALUE };
 		sparqlTab.setLayout(gbl_sparqlTab);
@@ -1005,28 +1040,20 @@ public class Dashboard {
 		sparqlTab.add(updateGraphs, gbc_updateGraphs);
 		GridBagLayout gbl_updateGraphs = new GridBagLayout();
 		gbl_updateGraphs.columnWidths = new int[] { 0, 0, 0 };
-		gbl_updateGraphs.rowHeights = new int[] { 0, 22, 0, 0, 0 };
+		gbl_updateGraphs.rowHeights = new int[] { 0, 0, 0, 0 };
 		gbl_updateGraphs.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-		gbl_updateGraphs.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_updateGraphs.rowWeights = new double[] { 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		updateGraphs.setLayout(gbl_updateGraphs);
 
 		updateURL = new JLabel("-");
 		updateURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		updateURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
 		GridBagConstraints gbc_updateURL = new GridBagConstraints();
-		gbc_updateURL.anchor = GridBagConstraints.WEST;
 		gbc_updateURL.gridwidth = 2;
 		gbc_updateURL.insets = new Insets(0, 0, 5, 0);
 		gbc_updateURL.gridx = 0;
 		gbc_updateURL.gridy = 0;
 		updateGraphs.add(updateURL, gbc_updateURL);
-
-		JLabel label_1 = new JLabel("");
-		GridBagConstraints gbc_label_1 = new GridBagConstraints();
-		gbc_label_1.insets = new Insets(0, 0, 5, 5);
-		gbc_label_1.gridx = 0;
-		gbc_label_1.gridy = 1;
-		updateGraphs.add(label_1, gbc_label_1);
 
 		JLabel label_2 = new JLabel("using-graph-uri:");
 		label_2.setFont(new Font("Lucida Grande", Font.BOLD, 13));
@@ -1035,7 +1062,7 @@ public class Dashboard {
 		gbc_label_2.anchor = GridBagConstraints.EAST;
 		gbc_label_2.insets = new Insets(0, 0, 5, 5);
 		gbc_label_2.gridx = 0;
-		gbc_label_2.gridy = 2;
+		gbc_label_2.gridy = 1;
 		updateGraphs.add(label_2, gbc_label_2);
 
 		usingGraphURI = new JLabel("-");
@@ -1045,7 +1072,7 @@ public class Dashboard {
 		gbc_updateUsingGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_updateUsingGraphURI.insets = new Insets(0, 0, 5, 0);
 		gbc_updateUsingGraphURI.gridx = 1;
-		gbc_updateUsingGraphURI.gridy = 2;
+		gbc_updateUsingGraphURI.gridy = 1;
 		updateGraphs.add(usingGraphURI, gbc_updateUsingGraphURI);
 
 		JLabel label_4 = new JLabel("using-named-graph-uri:");
@@ -1055,7 +1082,7 @@ public class Dashboard {
 		gbc_label_4.anchor = GridBagConstraints.EAST;
 		gbc_label_4.insets = new Insets(0, 0, 0, 5);
 		gbc_label_4.gridx = 0;
-		gbc_label_4.gridy = 3;
+		gbc_label_4.gridy = 2;
 		updateGraphs.add(label_4, gbc_label_4);
 
 		usingNamedGraphURI = new JLabel("-");
@@ -1064,7 +1091,7 @@ public class Dashboard {
 		GridBagConstraints gbc_updateUsingNamedGraphURI = new GridBagConstraints();
 		gbc_updateUsingNamedGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_updateUsingNamedGraphURI.gridx = 1;
-		gbc_updateUsingNamedGraphURI.gridy = 3;
+		gbc_updateUsingNamedGraphURI.gridy = 2;
 		updateGraphs.add(usingNamedGraphURI, gbc_updateUsingNamedGraphURI);
 
 		JPanel queryGraphs = new JPanel();
@@ -1076,33 +1103,29 @@ public class Dashboard {
 		gbc_queryGraphs.gridy = 0;
 		sparqlTab.add(queryGraphs, gbc_queryGraphs);
 		GridBagLayout gbl_queryGraphs = new GridBagLayout();
-		gbl_queryGraphs.columnWidths = new int[] { 0, 0, 0 };
-		gbl_queryGraphs.rowHeights = new int[] { 0, 0, 0, 0, 0 };
-		gbl_queryGraphs.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-		gbl_queryGraphs.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_queryGraphs.columnWidths = new int[] { 228, 207, 0 };
+		gbl_queryGraphs.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_queryGraphs.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
+		gbl_queryGraphs.rowWeights = new double[] { 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		queryGraphs.setLayout(gbl_queryGraphs);
 
 		queryURL = new JLabel("-");
 		queryURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		queryURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
 		GridBagConstraints gbc_queryURL = new GridBagConstraints();
-		gbc_queryURL.anchor = GridBagConstraints.WEST;
-		gbc_queryURL.gridwidth = 2;
-		gbc_queryURL.insets = new Insets(0, 0, 5, 0);
+		gbc_queryURL.insets = new Insets(0, 0, 5, 5);
 		gbc_queryURL.gridx = 0;
 		gbc_queryURL.gridy = 0;
 		queryGraphs.add(queryURL, gbc_queryURL);
-
-		subscribeURL = new JLabel("-");
-		subscribeURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		subscribeURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
-		GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
-		gbc_subscribeURL.anchor = GridBagConstraints.WEST;
-		gbc_subscribeURL.gridwidth = 2;
-		gbc_subscribeURL.insets = new Insets(0, 0, 5, 0);
-		gbc_subscribeURL.gridx = 0;
-		gbc_subscribeURL.gridy = 1;
-		queryGraphs.add(subscribeURL, gbc_subscribeURL);
+		
+				subscribeURL = new JLabel("-");
+				subscribeURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
+				subscribeURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+				GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
+				gbc_subscribeURL.insets = new Insets(0, 0, 5, 0);
+				gbc_subscribeURL.gridx = 1;
+				gbc_subscribeURL.gridy = 0;
+				queryGraphs.add(subscribeURL, gbc_subscribeURL);
 
 		JLabel label_8 = new JLabel("default-graph-uri:");
 		label_8.setFont(new Font("Lucida Grande", Font.BOLD, 13));
@@ -1111,7 +1134,7 @@ public class Dashboard {
 		gbc_label_8.anchor = GridBagConstraints.EAST;
 		gbc_label_8.insets = new Insets(0, 0, 5, 5);
 		gbc_label_8.gridx = 0;
-		gbc_label_8.gridy = 2;
+		gbc_label_8.gridy = 1;
 		queryGraphs.add(label_8, gbc_label_8);
 
 		defaultGraphURI = new JLabel("-");
@@ -1121,7 +1144,7 @@ public class Dashboard {
 		gbc_defaultGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_defaultGraphURI.insets = new Insets(0, 0, 5, 0);
 		gbc_defaultGraphURI.gridx = 1;
-		gbc_defaultGraphURI.gridy = 2;
+		gbc_defaultGraphURI.gridy = 1;
 		queryGraphs.add(defaultGraphURI, gbc_defaultGraphURI);
 
 		JLabel label_10 = new JLabel("named-graph-uri:");
@@ -1131,7 +1154,7 @@ public class Dashboard {
 		gbc_label_10.anchor = GridBagConstraints.EAST;
 		gbc_label_10.insets = new Insets(0, 0, 0, 5);
 		gbc_label_10.gridx = 0;
-		gbc_label_10.gridy = 3;
+		gbc_label_10.gridy = 2;
 		queryGraphs.add(label_10, gbc_label_10);
 
 		namedGraphURI = new JLabel("-");
@@ -1140,7 +1163,7 @@ public class Dashboard {
 		GridBagConstraints gbc_namedGraphURI = new GridBagConstraints();
 		gbc_namedGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_namedGraphURI.gridx = 1;
-		gbc_namedGraphURI.gridy = 3;
+		gbc_namedGraphURI.gridy = 2;
 		queryGraphs.add(namedGraphURI, gbc_namedGraphURI);
 
 		JSplitPane updates = new JSplitPane();
@@ -1422,6 +1445,7 @@ public class Dashboard {
 		panel_7.setLayout(gbl_panel_7);
 
 		btnQuery = new JButton("QUERY");
+		btnQuery.setEnabled(false);
 		btnQuery.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
@@ -1513,7 +1537,7 @@ public class Dashboard {
 		JScrollPane scrollPane_5 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
 		gbc_scrollPane_5.fill = GridBagConstraints.BOTH;
-		gbc_scrollPane_5.insets = new Insets(0, 0, 5, 0);
+		gbc_scrollPane_5.insets = new Insets(5, 10, 5, 10);
 		gbc_scrollPane_5.gridx = 0;
 		gbc_scrollPane_5.gridy = 1;
 		frmSepaDashboard.getContentPane().add(scrollPane_5, gbc_scrollPane_5);
@@ -1532,9 +1556,9 @@ public class Dashboard {
 		gbc_infoPanel.gridy = 2;
 		frmSepaDashboard.getContentPane().add(infoPanel, gbc_infoPanel);
 		GridBagLayout gbl_infoPanel = new GridBagLayout();
-		gbl_infoPanel.columnWidths = new int[] { 104, 88, 0, 0, 0, 97, 76, 0 };
+		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 97, 76, 0 };
 		gbl_infoPanel.rowHeights = new int[] { 29, 0 };
-		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		gbl_infoPanel.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		infoPanel.setLayout(gbl_infoPanel);
 
@@ -1549,15 +1573,24 @@ public class Dashboard {
 		infoPanel.add(btnLoadXmlProfile, gbc_btnLoadXmlProfile);
 		btnLoadXmlProfile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-
-				final JFileChooser fc = new JFileChooser(appProperties.getProperty("appProfile"));
+				String openIn = null;
+				if (appProperties.getProperty("appProfile") != null) {
+					String[] profilePath = appProperties.getProperty("appProfile").split(",");
+					openIn = profilePath[profilePath.length-1];
+				}
+							
+				final JFileChooser fc = new JFileChooser(openIn);
 				DashboardFileFilter filter = new DashboardFileFilter("JSON SAP Profile (.jsap)", ".jsap");
 				fc.setFileFilter(filter);
 				int returnVal = fc.showOpenDialog(frmSepaDashboard);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					String fileName = fc.getSelectedFile().getPath();
 
-					if (loadSAP(fileName)) {
+					if (jsapFiles.contains(fileName)) {
+						jsapFiles.remove(fileName);
+					}
+					
+					if (loadSAP(fileName, !chckbxMerge.isSelected())) {
 						FileOutputStream out = null;
 						try {
 							out = new FileOutputStream("dashboard.properties");
@@ -1565,9 +1598,15 @@ public class Dashboard {
 							logger.error(e3.getMessage());
 							return;
 						}
+						
+						String path = "";
+						for (int i=0; i < jsapFiles.size() ; i++) {
+							if (i == 0) path = jsapFiles.get(i);
+							else path = path + "," + jsapFiles.get(i);
+						}
 
 						appProperties = new Properties();
-						appProperties.put("appProfile", fileName);
+						appProperties.put("appProfile", path);
 						appProperties.put("jksName", jksName);
 						appProperties.put("jksPass", jksPass);
 						appProperties.put("keyPass", keyPass);
@@ -1588,39 +1627,33 @@ public class Dashboard {
 			}
 		});
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
-
-		btnRegister = new JButton("REGISTER");
-		btnRegister.setEnabled(false);
-		btnRegister.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				try {
-					sm.register(userID.getText());
-				} catch (SEPASecurityException | SEPAPropertiesException e1) {
-					logger.error(e1.getMessage());
-				}
+		
+		btnLogout = new JButton("Logout");
+		btnLogout.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				login.setVisible(true);
 			}
 		});
-		GridBagConstraints gbc_btnRegister = new GridBagConstraints();
-		gbc_btnRegister.insets = new Insets(0, 0, 0, 5);
-		gbc_btnRegister.gridx = 1;
-		gbc_btnRegister.gridy = 0;
-		infoPanel.add(btnRegister, gbc_btnRegister);
-
-		userID = new JTextField();
-		userID.setEnabled(false);
-		userID.setText("SEPATest");
-		GridBagConstraints gbc_userID = new GridBagConstraints();
-		gbc_userID.insets = new Insets(0, 0, 0, 5);
-		gbc_userID.fill = GridBagConstraints.HORIZONTAL;
-		gbc_userID.gridx = 2;
-		gbc_userID.gridy = 0;
-		infoPanel.add(userID, gbc_userID);
-		userID.setColumns(10);
+		
+		chckbxMerge = new JCheckBox("merge");
+		chckbxMerge.setSelected(true);
+		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
+		gbc_chckbxMerge.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxMerge.gridx = 1;
+		gbc_chckbxMerge.gridy = 0;
+		infoPanel.add(chckbxMerge, gbc_chckbxMerge);
+		btnLogout.setEnabled(false);
+		GridBagConstraints gbc_btnLogout = new GridBagConstraints();
+		gbc_btnLogout.insets = new Insets(0, 0, 0, 5);
+		gbc_btnLogout.gridx = 2;
+		gbc_btnLogout.gridy = 0;
+		infoPanel.add(btnLogout, gbc_btnLogout);
 
 		JCheckBox chckbxQname = new JCheckBox("Qname");
 		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
 		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxQname.gridx = 4;
+		gbc_chckbxQname.gridx = 5;
 		gbc_chckbxQname.gridy = 0;
 		infoPanel.add(chckbxQname, gbc_chckbxQname);
 		chckbxQname.addChangeListener(new ChangeListener() {
@@ -1637,7 +1670,7 @@ public class Dashboard {
 		JButton btnNewButton = new JButton("Clear results");
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
 		gbc_btnNewButton.insets = new Insets(0, 0, 0, 5);
-		gbc_btnNewButton.gridx = 5;
+		gbc_btnNewButton.gridx = 6;
 		gbc_btnNewButton.gridy = 0;
 		infoPanel.add(btnNewButton, gbc_btnNewButton);
 		btnNewButton.addActionListener(new ActionListener() {
@@ -1651,7 +1684,7 @@ public class Dashboard {
 		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
 		GridBagConstraints gbc_btnClean = new GridBagConstraints();
 		gbc_btnClean.anchor = GridBagConstraints.NORTHWEST;
-		gbc_btnClean.gridx = 6;
+		gbc_btnClean.gridx = 7;
 		gbc_btnClean.gridy = 0;
 		infoPanel.add(btnClean, gbc_btnClean);
 		btnClean.addActionListener(new ActionListener() {
@@ -1680,8 +1713,10 @@ public class Dashboard {
 		Bindings bindings = new Bindings();
 		for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
 			String type;
-			if (queryForcedBindings.getValueAt(row, 2) == null) type = "xsd:string"; 
-			else type = queryForcedBindings.getValueAt(row, 2).toString();
+			if (queryForcedBindings.getValueAt(row, 2) == null)
+				type = "xsd:string";
+			else
+				type = queryForcedBindings.getValueAt(row, 2).toString();
 			String value = queryForcedBindings.getValueAt(row, 1).toString();
 			String variable = queryForcedBindings.getValueAt(row, 0).toString();
 			if (type.toUpperCase().equals("URI"))
@@ -1699,11 +1734,13 @@ public class Dashboard {
 		Bindings bindings = new Bindings();
 		for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
 			String type = null;
-			if (queryForcedBindings.getValueAt(row, 2) != null) type = queryForcedBindings.getValueAt(row, 2).toString();
+			if (queryForcedBindings.getValueAt(row, 2) != null)
+				type = queryForcedBindings.getValueAt(row, 2).toString();
 			String value = queryForcedBindings.getValueAt(row, 1).toString();
 			String variable = queryForcedBindings.getValueAt(row, 0).toString();
-			
-			if (type == null) bindings.addBinding(variable, new RDFTermLiteral(value));
+
+			if (type == null)
+				bindings.addBinding(variable, new RDFTermLiteral(value));
 			else if (type.toUpperCase().equals("URI"))
 				bindings.addBinding(variable, new RDFTermURI(value));
 			else if (type.toUpperCase().equals("BNODE"))
@@ -1720,6 +1757,14 @@ public class Dashboard {
 			if (ret.isError()) {
 				logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 				queryInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
+				
+				//Security
+				ErrorResponse error = (ErrorResponse) ret;
+				if (error.getStatusCode() == 401 && error.getError().equals("invalid_grant")) {
+					sm.refreshToken();
+					query();
+				}
+				
 			} else {
 				QueryResponse results = (QueryResponse) ret;
 				logger.info(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
@@ -1738,13 +1783,18 @@ public class Dashboard {
 		Bindings bindings = new Bindings();
 		for (int row = 0; row < updateForcedBindings.getRowCount(); row++) {
 			String type;
-			if (updateForcedBindings.getValueAt(row, 2) == null) type = "xsd:string"; 
-			else type = updateForcedBindings.getValueAt(row, 2).toString();
+			if (updateForcedBindings.getValueAt(row, 2) == null)
+				type = null;
+			else
+				type = updateForcedBindings.getValueAt(row, 2).toString();
 			String value = updateForcedBindings.getValueAt(row, 1).toString();
 			String variable = updateForcedBindings.getValueAt(row, 0).toString();
-			if (type.equals("URI"))
+
+			if (type == null)
+				bindings.addBinding(variable, new RDFTermLiteral(value));
+			else if (type.toUpperCase().equals("URI"))
 				bindings.addBinding(variable, new RDFTermURI(value));
-			else if (type.equals("BNODE"))
+			else if (type.toUpperCase().equals("BNODE"))
 				bindings.addBinding(variable, new RDFTermBNode(value));
 			else
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
@@ -1758,6 +1808,13 @@ public class Dashboard {
 			if (ret.isError()) {
 				logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 				updateInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
+				
+				//Security
+				ErrorResponse error = (ErrorResponse) ret;
+				if (error.getStatusCode() == 401 && error.getError().equals("invalid_grant")) {
+					sm.refreshToken();
+					update();
+				}
 			} else {
 				logger.info(String.format("Update OK (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 				updateInfo.setText(String.format("Update OK (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
@@ -1946,5 +2003,28 @@ public class Dashboard {
 		}
 		btnQuery.setEnabled(true);
 		subscribeButton.setEnabled(true);
+	}
+
+	@Override
+	public void onLogin() {
+		login.setVisible(false);
+		btnLogout.setEnabled(true);	
+	}
+
+	@Override
+	public void onRegister() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onError(ErrorResponse err) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+	public void onLoginClose() {
+		System.exit(0);
 	}
 }
