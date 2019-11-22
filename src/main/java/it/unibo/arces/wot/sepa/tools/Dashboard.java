@@ -409,26 +409,28 @@ public class Dashboard implements LoginListener {
 			StringBuffer sbf = new StringBuffer();
 			// Check to ensure we have selected only a contiguous block of
 			// cells
-			int numcols = tbl.getSelectedColumnCount();
-			int numrows = tbl.getSelectedRowCount();
+//			int numcols = tbl.getSelectedColumnCount();
+//			int numrows = tbl.getSelectedRowCount();
+			
 			int[] rowsselected = tbl.getSelectedRows();
 			int[] colsselected = tbl.getSelectedColumns();
-			if (!((numrows - 1 == rowsselected[rowsselected.length - 1] - rowsselected[0]
-					&& numrows == rowsselected.length)
-					&& (numcols - 1 == colsselected[colsselected.length - 1] - colsselected[0]
-							&& numcols == colsselected.length))) {
-				JOptionPane.showMessageDialog(null, "Invalid Copy Selection", "Invalid Copy Selection",
-						JOptionPane.ERROR_MESSAGE);
-				return;
-			}
 			
-			for (int i = 0; i < numrows; i++) {
-				for (int j = 0; j < numcols; j++) {
-					TableCellRenderer renderer = tbl.getCellRenderer(i, j);
-					final Component comp = tbl.prepareRenderer(renderer, i, j);
+//			if (!((numrows - 1 == rowsselected[rowsselected.length - 1] - rowsselected[0]
+//					&& numrows == rowsselected.length)
+//					&& (numcols - 1 == colsselected[colsselected.length - 1] - colsselected[0]
+//							&& numcols == colsselected.length))) {
+//				JOptionPane.showMessageDialog(null, "Invalid Copy Selection", "Invalid Copy Selection",
+//						JOptionPane.ERROR_MESSAGE);
+//				return;
+//			}
+			
+			for (int i = 0; i < rowsselected.length; i++) {
+				for (int j = 0; j < colsselected.length; j++) {
+					TableCellRenderer renderer = tbl.getCellRenderer(rowsselected[i], colsselected[j]);
+					final Component comp = tbl.prepareRenderer(renderer, rowsselected[i], colsselected[j]);
 					String toCopy = ((JLabel) comp).getText();
 					sbf.append(toCopy);
-					if (j < numcols - 1)
+					if (j < colsselected.length - 1)
 						sbf.append("\t");
 				}
 				sbf.append("\n");
