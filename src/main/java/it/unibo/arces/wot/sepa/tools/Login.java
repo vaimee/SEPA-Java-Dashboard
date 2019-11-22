@@ -17,7 +17,7 @@ import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
 import it.unibo.arces.wot.sepa.commons.response.RegistrationResponse;
 import it.unibo.arces.wot.sepa.commons.response.Response;
-import it.unibo.arces.wot.sepa.commons.security.SEPASecurityManager;
+import it.unibo.arces.wot.sepa.commons.security.ClientSecurityManager;
 
 import java.awt.GridBagLayout;
 import javax.swing.JRadioButton;
@@ -54,7 +54,7 @@ public class Login extends JDialog implements ActionListener {
 	/**
 	 * Create the dialog.
 	 */
-	public Login(SEPASecurityManager sm,LoginListener m_listener,JFrame parent) {
+	public Login(ClientSecurityManager sm,LoginListener m_listener,JFrame parent) {
 		setType(Type.POPUP);
 		setModal(true);
 		if (sm == null) throw new IllegalArgumentException("Security manager is null");
@@ -91,9 +91,7 @@ public class Login extends JDialog implements ActionListener {
 		gbl_contentPanel.columnWeights = new double[]{0.0, 1.0, 0.0, Double.MIN_VALUE};
 		gbl_contentPanel.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
 		contentPanel.setLayout(gbl_contentPanel);
-		{
-			
-			
+		{		
 			{
 				rdbtnRegisterANew = new JRadioButton("Register a new identity");
 				GridBagConstraints gbc_rdbtnRegisterANew = new GridBagConstraints();
@@ -172,16 +170,17 @@ public class Login extends JDialog implements ActionListener {
 						Response ret = sm.refreshToken();
 						if (ret.isError()) {
 							logger.error(ret);
-							m_listener.onError((ErrorResponse)ret);
+							m_listener.onLoginError((ErrorResponse)ret);
+							setTitle("Wrong credentials");
 							return;
 						}
 						
 						sm.storeOAuthProperties();
 						
-						m_listener.onLogin();
+						m_listener.onLogin(ID.getText());
 					} catch (SEPAPropertiesException | SEPASecurityException e1) {
 						logger.error(e1.getMessage());
-						m_listener.onError(new ErrorResponse(401,"not_authorized",e1.getMessage()));
+						m_listener.onLoginError(new ErrorResponse(401,"not_authorized",e1.getMessage()));
 					}
 				}
 				else {
@@ -190,22 +189,32 @@ public class Login extends JDialog implements ActionListener {
 						
 						if (ret.isError()) {
 							logger.error(ret);
-							m_listener.onError((ErrorResponse)ret);
+							m_listener.onLoginError((ErrorResponse)ret);
 							return;	
 						}
 						
 						RegistrationResponse reg = (RegistrationResponse) ret;
 						
-						rdbtnSignIn.setSelected(true);
-						
-						ID.setText(reg.getClientId());
-						PWD.setText(reg.getClientSecret());
-						
-						m_listener.onRegister();
+						if (reg.isError()) {
+							setTitle("Failed to register");
+						}
+						else {
+							ID.setText(reg.getClientId());
+							PWD.setText(reg.getClientSecret());
+							
+//							ID.setVisible(true);
+//							PWD.setVisible(true);
+							
+							rdbtnSignIn.setSelected(true);
+							changeSelection();
+					
+							m_listener.onRegister();	
+						}
+
 						
 					} catch (SEPASecurityException | SEPAPropertiesException e1) {
 						logger.error(e1.getMessage());
-						m_listener.onError(new ErrorResponse(401,"not_authorized",e1.getMessage()));
+						m_listener.onLoginError(new ErrorResponse(401,"not_authorized",e1.getMessage()));
 					}
 				}
 			}
@@ -220,9 +229,8 @@ public class Login extends JDialog implements ActionListener {
 			ID.setText(sm.getClientId());
 		}
 	}
-
-	@Override
-	public void actionPerformed(ActionEvent e) {
+	
+	private void changeSelection() {
 		if (rdbtnSignIn.isSelected()) {
 			btnLogin.setText("Login");
 			ID.setEditable(true);
@@ -237,7 +245,11 @@ public class Login extends JDialog implements ActionListener {
 			btnLogin.setText("Register");
 			lblPassword.setVisible(false);
 			PWD.setVisible(false);
-		}
-		
+		}	
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		changeSelection();		
 	}
 }

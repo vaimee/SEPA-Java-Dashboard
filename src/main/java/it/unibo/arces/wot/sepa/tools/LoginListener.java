@@ -3,8 +3,8 @@ package it.unibo.arces.wot.sepa.tools;
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
 
 public interface LoginListener {
-	void onLogin();
+	void onLogin(String string);
 	void onRegister();
-	void onError(ErrorResponse err);
+	void onLoginError(ErrorResponse err);
 	void onLoginClose();
 }

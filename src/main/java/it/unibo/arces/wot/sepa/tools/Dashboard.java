@@ -90,7 +90,7 @@ import it.unibo.arces.wot.sepa.commons.response.Notification;
 import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
 import it.unibo.arces.wot.sepa.commons.response.Response;
 import it.unibo.arces.wot.sepa.commons.security.AuthenticationProperties;
-import it.unibo.arces.wot.sepa.commons.security.SEPASecurityManager;
+import it.unibo.arces.wot.sepa.commons.security.ClientSecurityManager;
 import it.unibo.arces.wot.sepa.commons.sparql.ARBindingsResults;
 import it.unibo.arces.wot.sepa.commons.sparql.Bindings;
 import it.unibo.arces.wot.sepa.commons.sparql.BindingsResults;
@@ -109,7 +109,9 @@ import javax.swing.border.LineBorder;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import java.awt.Panel;
+
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
@@ -121,6 +123,8 @@ import java.awt.event.MouseEvent;
 
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
+
+	static final String title = "SEPA Dashboard Ver 0.9.9";
 
 	static Dashboard window;
 
@@ -184,23 +188,31 @@ public class Dashboard implements LoginListener {
 
 	private String jksName = "sepa.jks";
 	private String jksPass = "sepa2017";
-	private String keyPass = "sepa2017";
+//	private String keyPass = "sepa2017";
 	private JButton btnQuery;
 	private JLabel updateInfo;
 	private JLabel queryInfo;
-	
+
 	JCheckBox chckbxMerge;
-	
-	private SEPASecurityManager sm;
+
+	private ClientSecurityManager sm;
 
 	private JTabbedPane subscriptionsPanel = new JTabbedPane(JTabbedPane.TOP);
-	
+
 	private Login login = null;
 	private JButton btnLogout;
-	
+
 	private ArrayList<String> jsapFiles = new ArrayList<String>();
-	
+
+	private enum SUB_OP {
+		SUB, UNSUB, NONE
+	};
+
+	private SUB_OP subOp = SUB_OP.NONE;
+
 	class DashboardHandler implements ISubscriptionHandler {
+		protected String unsubSpuid;
+
 		@Override
 		public void onSemanticEvent(Notification n) {
 			ARBindingsResults notify = n.getARBindingsResults();
@@ -237,10 +249,38 @@ public class Dashboard implements LoginListener {
 		@Override
 		public void onError(ErrorResponse errorResponse) {
 			logger.error(errorResponse);
+
+			// REFRESH TOKEN FRO SUBSCRIPTION
+			if (appProfile.isSecure() && errorResponse.isTokenExpiredError()) {
+				try {
+					Response ret = sm.refreshToken();
+					logger.debug(ret);
+				} catch (SEPAPropertiesException | SEPASecurityException e) {
+					logger.error(e.getMessage());
+					if (logger.isTraceEnabled())
+						e.printStackTrace();
+					return;
+				}
+
+				try {
+					if (subOp.equals(SUB_OP.SUB))
+						subscribe();
+					else if (subOp.equals(SUB_OP.UNSUB))
+						sepaClient.unsubscribe(unsubSpuid, Integer.parseInt(timeout.getText()));
+
+				} catch (NumberFormatException | IOException | SEPAPropertiesException | SEPAProtocolException
+						| SEPASecurityException | SEPABindingsException e) {
+					logger.error(e.getMessage());
+					if (logger.isTraceEnabled())
+						e.printStackTrace();
+				}
+			}
 		}
 
 		@Override
 		public void onSubscribe(String spuid, String alias) {
+			subOp = SUB_OP.NONE;
+
 			// Subscription panel
 			JPanel sub = new JPanel();
 
@@ -265,6 +305,8 @@ public class Dashboard implements LoginListener {
 			unsubscribeButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
+						subOp = SUB_OP.UNSUB;
+						unsubSpuid = spuid;
 						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()));
 					} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException
 							| SEPAProtocolException e1) {
@@ -307,6 +349,8 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public void onUnsubscribe(String spuid) {
+			subOp = SUB_OP.NONE;
+
 			subscriptionsPanel.remove(subscriptions.get(spuid));
 			subscriptions.remove(spuid);
 			subscriptionResultsDM.remove(spuid);
@@ -361,18 +405,37 @@ public class Dashboard implements LoginListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			final JTable tbl = (JTable) e.getSource();
-			final int row = tbl.getSelectedRow();
-			final int col = tbl.getSelectedColumn();
-			if (row >= 0 && col >= 0) {
-				final TableCellRenderer renderer = tbl.getCellRenderer(row, col);
-				final Component comp = tbl.prepareRenderer(renderer, row, col);
-				if (comp instanceof JLabel) {
-					final String toCopy = ((JLabel) comp).getText();
-					final StringSelection selection = new StringSelection(toCopy);
-					final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-					clipboard.setContents(selection, selection);
-				}
+
+			StringBuffer sbf = new StringBuffer();
+			// Check to ensure we have selected only a contiguous block of
+			// cells
+			int numcols = tbl.getSelectedColumnCount();
+			int numrows = tbl.getSelectedRowCount();
+			int[] rowsselected = tbl.getSelectedRows();
+			int[] colsselected = tbl.getSelectedColumns();
+			if (!((numrows - 1 == rowsselected[rowsselected.length - 1] - rowsselected[0]
+					&& numrows == rowsselected.length)
+					&& (numcols - 1 == colsselected[colsselected.length - 1] - colsselected[0]
+							&& numcols == colsselected.length))) {
+				JOptionPane.showMessageDialog(null, "Invalid Copy Selection", "Invalid Copy Selection",
+						JOptionPane.ERROR_MESSAGE);
+				return;
 			}
+			
+			for (int i = 0; i < numrows; i++) {
+				for (int j = 0; j < numcols; j++) {
+					TableCellRenderer renderer = tbl.getCellRenderer(i, j);
+					final Component comp = tbl.prepareRenderer(renderer, i, j);
+					String toCopy = ((JLabel) comp).getText();
+					sbf.append(toCopy);
+					if (j < numcols - 1)
+						sbf.append("\t");
+				}
+				sbf.append("\n");
+			}
+			StringSelection stsel = new StringSelection(sbf.toString());
+			Clipboard system = Toolkit.getDefaultToolkit().getSystemClipboard();
+			system.setContents(stsel, stsel);
 		}
 
 	}
@@ -726,6 +789,8 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public void setValue(Object value) {
+			super.setValue(value);
+
 			if (value == null)
 				return;
 
@@ -767,6 +832,10 @@ public class Dashboard implements LoginListener {
 				setText(binding.get() + "^^" + binding.getDataType());
 			else
 				setText(binding.get());
+
+			if (isSelected) {
+				this.setBackground(Color.YELLOW);
+			}
 
 			return this;
 		}
@@ -856,19 +925,20 @@ public class Dashboard implements LoginListener {
 				logger.error("Path in dashboard.properties is null");
 				return false;
 			}
-			
+
 			String[] jsaps = path.split(",");
-			for (int i = 0; i < jsaps.length; i++) jsapFiles.add(jsaps[i]);
-			
+			for (int i = 0; i < jsaps.length; i++)
+				jsapFiles.add(jsaps[i]);
+
 			try {
 				appProfile = new JSAP(jsapFiles.get(0));
 			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
-			
+
 			if (jsapFiles.size() > 1) {
-				for (int i=1; i < jsaps.length; i++) {
+				for (int i = 1; i < jsaps.length; i++) {
 					try {
 						appProfile.read(jsapFiles.get(i), true);
 					} catch (IOException e) {
@@ -877,29 +947,27 @@ public class Dashboard implements LoginListener {
 					}
 				}
 			}
-		}
-		else {
+		} else {
 			try {
 				if (load) {
 					appProfile = new JSAP(file);
 					jsapFiles.clear();
 					jsapFiles.add(file);
-				}
-				else if (appProfile != null) {
+				} else if (appProfile != null) {
 					appProfile.read(file, true);
 					jsapFiles.add(file);
 				}
 			} catch (SEPAPropertiesException | SEPASecurityException | IOException e) {
 				logger.error(e.getMessage());
 				return false;
-			}	
+			}
 		}
 
 		// Loading namespaces
-		for (String prefix : appProfile.getPrefixes()) {
+		for (String prefix : appProfile.getNamespaces().keySet()) {
 			Vector<String> row = new Vector<String>();
 			row.add(prefix);
-			row.addElement(appProfile.getNamespaceURI(prefix));
+			row.addElement(appProfile.getNamespaces().get(prefix));
 			namespacesDM.addRow(row);
 		}
 
@@ -922,23 +990,26 @@ public class Dashboard implements LoginListener {
 				return false;
 			}
 			try {
-				sm = new SEPASecurityManager(jksName, jksPass, keyPass, oauth);
+				if (oauth.trustAll())
+					sm = new ClientSecurityManager(oauth);
+				else
+					sm = new ClientSecurityManager(oauth, jksName, jksPass);
 			} catch (SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
-			
+
 			try {
 				sepaClient = new GenericClient(appProfile, sm);
 			} catch (SEPAProtocolException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
-			
-			login = new Login(sm,this,frmSepaDashboard);
+
+			login = new Login(sm, this, frmSepaDashboard);
 			login.setVisible(true);
 		} else {
-						
+
 			try {
 				sepaClient = new GenericClient(appProfile);
 			} catch (SEPAProtocolException e) {
@@ -1002,7 +1073,7 @@ public class Dashboard implements LoginListener {
 		propertiesDM.setColumnIdentifiers(propertiesHeader);
 
 		frmSepaDashboard = new JFrame();
-		frmSepaDashboard.setTitle("SEPA Dashboard Ver 0.9.9");
+		frmSepaDashboard.setTitle(title);
 		frmSepaDashboard.setBounds(100, 100, 925, 768);
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
@@ -1117,15 +1188,15 @@ public class Dashboard implements LoginListener {
 		gbc_queryURL.gridx = 0;
 		gbc_queryURL.gridy = 0;
 		queryGraphs.add(queryURL, gbc_queryURL);
-		
-				subscribeURL = new JLabel("-");
-				subscribeURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-				subscribeURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
-				GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
-				gbc_subscribeURL.insets = new Insets(0, 0, 5, 0);
-				gbc_subscribeURL.gridx = 1;
-				gbc_subscribeURL.gridy = 0;
-				queryGraphs.add(subscribeURL, gbc_subscribeURL);
+
+		subscribeURL = new JLabel("-");
+		subscribeURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
+		subscribeURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
+		gbc_subscribeURL.insets = new Insets(0, 0, 5, 0);
+		gbc_subscribeURL.gridx = 1;
+		gbc_subscribeURL.gridy = 0;
+		queryGraphs.add(subscribeURL, gbc_subscribeURL);
 
 		JLabel label_8 = new JLabel("default-graph-uri:");
 		label_8.setFont(new Font("Lucida Grande", Font.BOLD, 13));
@@ -1502,12 +1573,15 @@ public class Dashboard implements LoginListener {
 		results.setViewportView(bindingsResultsTable);
 		bindingsResultsTable.setBorder(UIManager.getBorder("Button.border"));
 		bindingsResultsTable.setFillsViewportHeight(true);
-		bindingsResultsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		bindingsResultsTable.setDefaultRenderer(BindingValue.class, bindingsRender);
+
 		bindingsResultsTable.registerKeyboardAction(new CopyAction(),
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
 				JComponent.WHEN_FOCUSED);
+
 		bindingsResultsTable.setCellSelectionEnabled(true);
+		bindingsResultsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
 		bindingsRender.setNamespaces(namespacesDM);
 
 		mainTabs.addTab("Active subscriptions", null, subscriptionsPanel, null);
@@ -1576,9 +1650,9 @@ public class Dashboard implements LoginListener {
 				String openIn = null;
 				if (appProperties.getProperty("appProfile") != null) {
 					String[] profilePath = appProperties.getProperty("appProfile").split(",");
-					openIn = profilePath[profilePath.length-1];
+					openIn = profilePath[profilePath.length - 1];
 				}
-							
+
 				final JFileChooser fc = new JFileChooser(openIn);
 				DashboardFileFilter filter = new DashboardFileFilter("JSON SAP Profile (.jsap)", ".jsap");
 				fc.setFileFilter(filter);
@@ -1589,7 +1663,7 @@ public class Dashboard implements LoginListener {
 					if (jsapFiles.contains(fileName)) {
 						jsapFiles.remove(fileName);
 					}
-					
+
 					if (loadSAP(fileName, !chckbxMerge.isSelected())) {
 						FileOutputStream out = null;
 						try {
@@ -1598,18 +1672,20 @@ public class Dashboard implements LoginListener {
 							logger.error(e3.getMessage());
 							return;
 						}
-						
+
 						String path = "";
-						for (int i=0; i < jsapFiles.size() ; i++) {
-							if (i == 0) path = jsapFiles.get(i);
-							else path = path + "," + jsapFiles.get(i);
+						for (int i = 0; i < jsapFiles.size(); i++) {
+							if (i == 0)
+								path = jsapFiles.get(i);
+							else
+								path = path + "," + jsapFiles.get(i);
 						}
 
 						appProperties = new Properties();
 						appProperties.put("appProfile", path);
 						appProperties.put("jksName", jksName);
 						appProperties.put("jksPass", jksPass);
-						appProperties.put("keyPass", keyPass);
+//						appProperties.put("keyPass", keyPass);
 
 						try {
 							appProperties.store(out, "Dashboard properties");
@@ -1627,7 +1703,7 @@ public class Dashboard implements LoginListener {
 			}
 		});
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
-		
+
 		btnLogout = new JButton("Logout");
 		btnLogout.addMouseListener(new MouseAdapter() {
 			@Override
@@ -1635,7 +1711,7 @@ public class Dashboard implements LoginListener {
 				login.setVisible(true);
 			}
 		});
-		
+
 		chckbxMerge = new JCheckBox("merge");
 		chckbxMerge.setSelected(true);
 		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
@@ -1757,14 +1833,14 @@ public class Dashboard implements LoginListener {
 			if (ret.isError()) {
 				logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 				queryInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
-				
-				//Security
+
+				// Security
 				ErrorResponse error = (ErrorResponse) ret;
 				if (error.getStatusCode() == 401 && error.getError().equals("invalid_grant")) {
 					sm.refreshToken();
 					query();
 				}
-				
+
 			} else {
 				QueryResponse results = (QueryResponse) ret;
 				logger.info(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
@@ -1808,8 +1884,8 @@ public class Dashboard implements LoginListener {
 			if (ret.isError()) {
 				logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 				updateInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
-				
-				//Security
+
+				// Security
 				ErrorResponse error = (ErrorResponse) ret;
 				if (error.getStatusCode() == 401 && error.getError().equals("invalid_grant")) {
 					sm.refreshToken();
@@ -2005,26 +2081,29 @@ public class Dashboard implements LoginListener {
 		subscribeButton.setEnabled(true);
 	}
 
+	// LOGIN
+
 	@Override
-	public void onLogin() {
+	public void onLogin(String id) {
 		login.setVisible(false);
-		btnLogout.setEnabled(true);	
+		btnLogout.setEnabled(true);
+		frmSepaDashboard.setTitle(title + " Login: " + id);
 	}
 
 	@Override
 	public void onRegister() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
-	public void onError(ErrorResponse err) {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	@Override
 	public void onLoginClose() {
 		System.exit(0);
+	}
+
+	@Override
+	public void onLoginError(ErrorResponse err) {
+		// TODO Auto-generated method stub
+
 	}
 }
