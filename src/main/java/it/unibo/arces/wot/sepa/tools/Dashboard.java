@@ -111,7 +111,6 @@ import javax.swing.UIManager;
 import java.awt.Panel;
 
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
@@ -186,9 +185,8 @@ public class Dashboard implements LoginListener {
 
 	private JTextArea textArea;
 
-	private String jksName = "sepa.jks";
-	private String jksPass = "sepa2017";
-//	private String keyPass = "sepa2017";
+	private String jksName = "vaimee.jks";
+	private String jksPass = "sepa2020";
 	private JButton btnQuery;
 	private JLabel updateInfo;
 	private JLabel queryInfo;
@@ -250,7 +248,7 @@ public class Dashboard implements LoginListener {
 		public void onError(ErrorResponse errorResponse) {
 			logger.error(errorResponse);
 
-			// REFRESH TOKEN FRO SUBSCRIPTION
+			// REFRESH TOKEN FROM SUBSCRIPTION
 			if (appProfile.isSecure() && errorResponse.isTokenExpiredError()) {
 				try {
 					Response ret = sm.refreshToken();
@@ -407,22 +405,9 @@ public class Dashboard implements LoginListener {
 			final JTable tbl = (JTable) e.getSource();
 
 			StringBuffer sbf = new StringBuffer();
-			// Check to ensure we have selected only a contiguous block of
-			// cells
-//			int numcols = tbl.getSelectedColumnCount();
-//			int numrows = tbl.getSelectedRowCount();
 			
 			int[] rowsselected = tbl.getSelectedRows();
 			int[] colsselected = tbl.getSelectedColumns();
-			
-//			if (!((numrows - 1 == rowsselected[rowsselected.length - 1] - rowsselected[0]
-//					&& numrows == rowsselected.length)
-//					&& (numcols - 1 == colsselected[colsselected.length - 1] - colsselected[0]
-//							&& numcols == colsselected.length))) {
-//				JOptionPane.showMessageDialog(null, "Invalid Copy Selection", "Invalid Copy Selection",
-//						JOptionPane.ERROR_MESSAGE);
-//				return;
-//			}
 			
 			for (int i = 0; i < rowsselected.length; i++) {
 				for (int j = 0; j < colsselected.length; j++) {
@@ -433,7 +418,7 @@ public class Dashboard implements LoginListener {
 					if (j < colsselected.length - 1)
 						sbf.append("\t");
 				}
-				sbf.append("\n");
+				if (i < rowsselected.length -1) sbf.append("\n");
 			}
 			StringSelection stsel = new StringSelection(sbf.toString());
 			Clipboard system = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -749,6 +734,7 @@ public class Dashboard implements LoginListener {
 
 		DefaultTableModel namespaces;
 		private boolean showAsQname = true;
+		private boolean showDataType =true;
 
 		public BindingsRender() {
 			super();
@@ -760,6 +746,10 @@ public class Dashboard implements LoginListener {
 
 		public void showAsQName(boolean set) {
 			showAsQname = set;
+		}
+		
+		public void showDataType(boolean show) {
+			showDataType = show;
 		}
 
 		private String qName(String value, boolean literal, String dataType) {
@@ -775,7 +765,7 @@ public class Dashboard implements LoginListener {
 					if (value.startsWith(ns))
 						return value.replace(ns, prefix + ":");
 				}
-			} else if (dataType != null) {
+			} else if (dataType != null && showDataType) {
 				for (int row = 0; row < namespaces.getRowCount(); row++) {
 					String prefix = namespaces.getValueAt(row, 0).toString();
 					String ns = namespaces.getValueAt(row, 1).toString();
@@ -830,7 +820,7 @@ public class Dashboard implements LoginListener {
 			// Render as qname or URI
 			if (showAsQname)
 				setText(qName(binding.get(), binding.isLiteral(), binding.getDataType()));
-			else if (binding.isLiteral() && binding.getDataType() != null)
+			else if (binding.isLiteral() && binding.getDataType() != null && showDataType)
 				setText(binding.get() + "^^" + binding.getDataType());
 			else
 				setText(binding.get());
@@ -1080,9 +1070,9 @@ public class Dashboard implements LoginListener {
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 925, 0 };
-		gridBagLayout.rowHeights = new int[] { 500, 129, 39, 0 };
+		gridBagLayout.rowHeights = new int[] { 642, 129, 39, 0 };
 		gridBagLayout.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gridBagLayout.rowWeights = new double[] { 1.0, 1.0, 0.0, Double.MIN_VALUE };
+		gridBagLayout.rowWeights = new double[] { 1.0, 0.0, 0.0, Double.MIN_VALUE };
 		frmSepaDashboard.getContentPane().setLayout(gridBagLayout);
 
 		mainTabs = new JTabbedPane(JTabbedPane.TOP);
@@ -1098,7 +1088,7 @@ public class Dashboard implements LoginListener {
 		mainTabs.setEnabledAt(0, true);
 		GridBagLayout gbl_sparqlTab = new GridBagLayout();
 		gbl_sparqlTab.columnWidths = new int[] { 233, 0, 0 };
-		gbl_sparqlTab.rowHeights = new int[] { 0, 155, 82, 29, 172, 0 };
+		gbl_sparqlTab.rowHeights = new int[] { 0, 87, 274, 29, 289, 0 };
 		gbl_sparqlTab.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
 		gbl_sparqlTab.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 1.0, Double.MIN_VALUE };
 		sparqlTab.setLayout(gbl_sparqlTab);
@@ -1106,8 +1096,9 @@ public class Dashboard implements LoginListener {
 		JPanel updateGraphs = new JPanel();
 		updateGraphs.setBorder(new LineBorder(new Color(0, 0, 0), 1, true));
 		GridBagConstraints gbc_updateGraphs = new GridBagConstraints();
+		gbc_updateGraphs.anchor = GridBagConstraints.NORTH;
 		gbc_updateGraphs.insets = new Insets(0, 0, 5, 5);
-		gbc_updateGraphs.fill = GridBagConstraints.BOTH;
+		gbc_updateGraphs.fill = GridBagConstraints.HORIZONTAL;
 		gbc_updateGraphs.gridx = 0;
 		gbc_updateGraphs.gridy = 0;
 		sparqlTab.add(updateGraphs, gbc_updateGraphs);
@@ -1170,8 +1161,9 @@ public class Dashboard implements LoginListener {
 		JPanel queryGraphs = new JPanel();
 		queryGraphs.setBorder(new LineBorder(new Color(0, 0, 0), 1, true));
 		GridBagConstraints gbc_queryGraphs = new GridBagConstraints();
+		gbc_queryGraphs.anchor = GridBagConstraints.NORTH;
 		gbc_queryGraphs.insets = new Insets(0, 0, 5, 0);
-		gbc_queryGraphs.fill = GridBagConstraints.BOTH;
+		gbc_queryGraphs.fill = GridBagConstraints.HORIZONTAL;
 		gbc_queryGraphs.gridx = 1;
 		gbc_queryGraphs.gridy = 0;
 		sparqlTab.add(queryGraphs, gbc_queryGraphs);
@@ -1240,10 +1232,12 @@ public class Dashboard implements LoginListener {
 		queryGraphs.add(namedGraphURI, gbc_namedGraphURI);
 
 		JSplitPane updates = new JSplitPane();
+		updates.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		updates.setResizeWeight(0.5);
 		GridBagConstraints gbc_updates = new GridBagConstraints();
+		gbc_updates.anchor = GridBagConstraints.NORTH;
 		gbc_updates.insets = new Insets(0, 0, 5, 5);
-		gbc_updates.fill = GridBagConstraints.BOTH;
+		gbc_updates.fill = GridBagConstraints.HORIZONTAL;
 		gbc_updates.gridx = 0;
 		gbc_updates.gridy = 1;
 		sparqlTab.add(updates, gbc_updates);
@@ -1292,9 +1286,9 @@ public class Dashboard implements LoginListener {
 		updates.setRightComponent(panel_3);
 		GridBagLayout gbl_panel_3 = new GridBagLayout();
 		gbl_panel_3.columnWidths = new int[] { 101, 0 };
-		gbl_panel_3.rowHeights = new int[] { 16, 0, 0 };
+		gbl_panel_3.rowHeights = new int[] { 16, 80, 0 };
 		gbl_panel_3.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panel_3.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panel_3.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
 		panel_3.setLayout(gbl_panel_3);
 
 		JLabel lblForcedBindings = new JLabel("FORCED BINDINGS");
@@ -1332,9 +1326,11 @@ public class Dashboard implements LoginListener {
 		updateForcedBindings.setCellSelectionEnabled(true);
 
 		JSplitPane queries = new JSplitPane();
+		queries.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		GridBagConstraints gbc_queries = new GridBagConstraints();
+		gbc_queries.anchor = GridBagConstraints.NORTH;
 		gbc_queries.insets = new Insets(0, 0, 5, 0);
-		gbc_queries.fill = GridBagConstraints.BOTH;
+		gbc_queries.fill = GridBagConstraints.HORIZONTAL;
 		gbc_queries.gridx = 1;
 		gbc_queries.gridy = 1;
 		sparqlTab.add(queries, gbc_queries);
@@ -1345,7 +1341,7 @@ public class Dashboard implements LoginListener {
 		gbl_panel_4.columnWidths = new int[] { 193, 0 };
 		gbl_panel_4.rowHeights = new int[] { 17, 72, 0 };
 		gbl_panel_4.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panel_4.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panel_4.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
 		panel_4.setLayout(gbl_panel_4);
 
 		JLabel label_14 = new JLabel("QUERIES");
@@ -1383,7 +1379,7 @@ public class Dashboard implements LoginListener {
 		queries.setRightComponent(panel_5);
 		GridBagLayout gbl_panel_5 = new GridBagLayout();
 		gbl_panel_5.columnWidths = new int[] { 123, 0 };
-		gbl_panel_5.rowHeights = new int[] { 16, 126, 0 };
+		gbl_panel_5.rowHeights = new int[] { 16, 83, 0 };
 		gbl_panel_5.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gbl_panel_5.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
 		panel_5.setLayout(gbl_panel_5);
@@ -1484,24 +1480,6 @@ public class Dashboard implements LoginListener {
 		gbc_udpdateInfo.gridx = 1;
 		gbc_udpdateInfo.gridy = 0;
 		panel_6.add(updateInfo, gbc_udpdateInfo);
-
-		timeout = new JTextField();
-		GridBagConstraints gbc_updateTimeout = new GridBagConstraints();
-		gbc_updateTimeout.fill = GridBagConstraints.HORIZONTAL;
-		gbc_updateTimeout.insets = new Insets(0, 0, 0, 5);
-		gbc_updateTimeout.gridx = 2;
-		gbc_updateTimeout.gridy = 0;
-		panel_6.add(timeout, gbc_updateTimeout);
-		timeout.setText("5000");
-		timeout.setColumns(10);
-
-		JLabel lblToms = new JLabel("Timeout (ms)");
-		GridBagConstraints gbc_lblToms = new GridBagConstraints();
-		gbc_lblToms.anchor = GridBagConstraints.EAST;
-		gbc_lblToms.gridx = 3;
-		gbc_lblToms.gridy = 0;
-		panel_6.add(lblToms, gbc_lblToms);
-		lblToms.setForeground(Color.BLACK);
 
 		JPanel panel_7 = new JPanel();
 		GridBagConstraints gbc_panel_7 = new GridBagConstraints();
@@ -1612,6 +1590,7 @@ public class Dashboard implements LoginListener {
 
 		JScrollPane scrollPane_5 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
+		gbc_scrollPane_5.anchor = GridBagConstraints.SOUTH;
 		gbc_scrollPane_5.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane_5.insets = new Insets(5, 10, 5, 10);
 		gbc_scrollPane_5.gridx = 0;
@@ -1632,9 +1611,9 @@ public class Dashboard implements LoginListener {
 		gbc_infoPanel.gridy = 2;
 		frmSepaDashboard.getContentPane().add(infoPanel, gbc_infoPanel);
 		GridBagLayout gbl_infoPanel = new GridBagLayout();
-		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 97, 76, 0 };
+		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 0, 97, 76, 0 };
 		gbl_infoPanel.rowHeights = new int[] { 29, 0 };
-		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		gbl_infoPanel.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		infoPanel.setLayout(gbl_infoPanel);
 
@@ -1687,7 +1666,6 @@ public class Dashboard implements LoginListener {
 						appProperties.put("appProfile", path);
 						appProperties.put("jksName", jksName);
 						appProperties.put("jksPass", jksPass);
-//						appProperties.put("keyPass", keyPass);
 
 						try {
 							appProperties.store(out, "Dashboard properties");
@@ -1717,21 +1695,59 @@ public class Dashboard implements LoginListener {
 		chckbxMerge = new JCheckBox("merge");
 		chckbxMerge.setSelected(true);
 		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
+		gbc_chckbxMerge.anchor = GridBagConstraints.WEST;
 		gbc_chckbxMerge.insets = new Insets(0, 0, 0, 5);
 		gbc_chckbxMerge.gridx = 1;
 		gbc_chckbxMerge.gridy = 0;
 		infoPanel.add(chckbxMerge, gbc_chckbxMerge);
 		btnLogout.setEnabled(false);
 		GridBagConstraints gbc_btnLogout = new GridBagConstraints();
+		gbc_btnLogout.anchor = GridBagConstraints.WEST;
 		gbc_btnLogout.insets = new Insets(0, 0, 0, 5);
 		gbc_btnLogout.gridx = 2;
 		gbc_btnLogout.gridy = 0;
 		infoPanel.add(btnLogout, gbc_btnLogout);
+		
+		JCheckBox chckbxDatatype = new JCheckBox("Datatype");
+		chckbxDatatype.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				bindingsRender.showDataType(chckbxDatatype.isSelected());
+				bindingsDM.fireTableDataChanged();
+				for (BindingsTableModel table : subscriptionResultsDM.values()) {
+					table.fireTableDataChanged();
+				}
+			}
+		});
+						
+								JLabel lblToms = new JLabel("Timeout (ms)");
+								GridBagConstraints gbc_lblToms = new GridBagConstraints();
+								gbc_lblToms.anchor = GridBagConstraints.EAST;
+								gbc_lblToms.insets = new Insets(0, 0, 0, 5);
+								gbc_lblToms.gridx = 3;
+								gbc_lblToms.gridy = 0;
+								infoPanel.add(lblToms, gbc_lblToms);
+								lblToms.setForeground(Color.BLACK);
+		
+				timeout = new JTextField();
+				GridBagConstraints gbc_timeout = new GridBagConstraints();
+				gbc_timeout.anchor = GridBagConstraints.EAST;
+				gbc_timeout.insets = new Insets(0, 0, 0, 5);
+				gbc_timeout.gridx = 4;
+				gbc_timeout.gridy = 0;
+				infoPanel.add(timeout, gbc_timeout);
+				timeout.setText("5000");
+				timeout.setColumns(10);
+		chckbxDatatype.setSelected(true);
+		GridBagConstraints gbc_chckbxDatatype = new GridBagConstraints();
+		gbc_chckbxDatatype.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxDatatype.gridx = 5;
+		gbc_chckbxDatatype.gridy = 0;
+		infoPanel.add(chckbxDatatype, gbc_chckbxDatatype);
 
 		JCheckBox chckbxQname = new JCheckBox("Qname");
 		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
 		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxQname.gridx = 5;
+		gbc_chckbxQname.gridx = 6;
 		gbc_chckbxQname.gridy = 0;
 		infoPanel.add(chckbxQname, gbc_chckbxQname);
 		chckbxQname.addChangeListener(new ChangeListener() {
@@ -1748,7 +1764,7 @@ public class Dashboard implements LoginListener {
 		JButton btnNewButton = new JButton("Clear results");
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
 		gbc_btnNewButton.insets = new Insets(0, 0, 0, 5);
-		gbc_btnNewButton.gridx = 6;
+		gbc_btnNewButton.gridx = 7;
 		gbc_btnNewButton.gridy = 0;
 		infoPanel.add(btnNewButton, gbc_btnNewButton);
 		btnNewButton.addActionListener(new ActionListener() {
@@ -1762,7 +1778,7 @@ public class Dashboard implements LoginListener {
 		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
 		GridBagConstraints gbc_btnClean = new GridBagConstraints();
 		gbc_btnClean.anchor = GridBagConstraints.NORTHWEST;
-		gbc_btnClean.gridx = 7;
+		gbc_btnClean.gridx = 8;
 		gbc_btnClean.gridy = 0;
 		infoPanel.add(btnClean, gbc_btnClean);
 		btnClean.addActionListener(new ActionListener() {
