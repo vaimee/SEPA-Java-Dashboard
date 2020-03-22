@@ -148,6 +148,8 @@ public class AddObservations extends Producer {
 		list.add("totale_casi");
 		list.add("tamponi");
 		
+		setUpdateBindingValue("unit", new RDFTermURI("unit:Number"));
+		
 		for (JsonElement prov : array) {
 			setUpdateBindingValue("place", new RDFTermURI("http://covid19/Italy/Region/" +prov.getAsJsonObject().get("denominazione_regione").getAsString().replace(" ", "_").replace("'", "_")));
 			setUpdateBindingValue("timestamp", new RDFTermLiteral(prov.getAsJsonObject().get("data").getAsString().replace(" ", "T").concat("Z")));
@@ -157,9 +159,7 @@ public class AddObservations extends Producer {
 				setUpdateBindingValue("value", new RDFTermLiteral(String.valueOf(prov.getAsJsonObject().get(pro).getAsInt())));	
 			
 				update();
-			}
-			
-			
+			}	
 		}
 	}
 	
@@ -169,6 +169,8 @@ public class AddObservations extends Producer {
 	 * */
 	public void addProvinceObservations() throws FileNotFoundException, SEPABindingsException, SEPASecurityException, SEPAProtocolException, SEPAPropertiesException {
 		JsonArray array = loadJsonArray("dpc-covid19-ita-province-latest.json");
+		
+		setUpdateBindingValue("unit", new RDFTermURI("unit:Number"));
 		
 		for (JsonElement prov : array) {
 			setUpdateBindingValue("place", new RDFTermURI("http://covid19/Italy/Province/" + prov.getAsJsonObject().get("denominazione_provincia").getAsString().replace(" ", "_").replace("'", "_")));			
