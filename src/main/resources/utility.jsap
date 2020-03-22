@@ -41,7 +41,7 @@
 		
 	},
 	"graphs": {
-	
+		
 	},
 	"namespaces": {
 		"schema": "http://schema.org/",
@@ -58,79 +58,41 @@
 		"gn": "http://www.geonames.org/ontology#"
 	},
 	"updates": {
-		"TO_HISTORY": {
-			"sparql": "INSERT {GRAPH <http://wot.arces.unibo.it/observation/history> {?result sosa:isResultOf ?observation ; qudt:numericValue ?value; time:inXSDDateTimeStamp ?timestamp}} where {}",
+		"DROP_GRAPH": {
+			"sparql": "DROP SILENT GRAPH ?graph",
 			"forcedBindings": {
-				"result": {
-					"type": "bnode"
-				},
-				"observation": {
+				"graph": {
 					"type": "uri"
-				},
-				"value": {
-					"type": "literal",
-					"datatype": "xsd:decimal"
-				},
-				"timestamp" : {
-					"type" : "literal",
-					"datatype" : "xsd:dateTime"
-				}
-			}
-		},
-		"TO_FORECAST": {
-			"sparql": "INSERT {GRAPH <http://wot.arces.unibo.it/forecast> { ?forecast rdf:type sosa:Observation ; rdf:type swamp:Forecast; sosa:hasFeatureOfInterest ?place ; sosa:observedProperty ?property; sosa:resultTime ?time; sosa:phenomenonTime ?ptime; sosa:hasResult ?result . ?result rdf:type qudt:QuantityValue ; rdf:type sosa:Result; qudt:unit ?unit ; qudt:numericValue ?value }} where{}",
-			"forcedBindings": {
-				"forecast": {
-					"type": "bnode"
-				},
-				"place": {
-					"type": "uri"
-				},
-				"property": {
-					"type": "uri"
-				},
-				"time" : {
-					"type" : "literal",
-					"datatype" : "xsd:dateTime"
-				},
-				"ptime" : {
-					"type" : "literal",
-					"datatype" : "xsd:dateTime"
-				},
-				"result": {
-					"type": "bnode"
-				},
-				"unit": {
-					"type": "uri"
-				},
-				"value": {
-					"type": "literal"
 				}
 			}
 		}
 	},
 	"queries": {
 		"FROM_HISTORY": {
-			"host" : "mml.arces.unibo.it",
-			"sparql11protocol" : {"port" : 8666},
+			"host": "mml.arces.unibo.it",
+			"sparql11protocol": {
+				"port": 8666
+			},
 			"sparql": "SELECT * WHERE {GRAPH <http://wot.arces.unibo.it/observation/history> {?result sosa:isResultOf ?observation ; qudt:numericValue ?value; time:inXSDDateTimeStamp ?timestamp} FILTER (xsd:dateTime(?timestamp) > ?from && xsd:dateTime(?timestamp) < ?to) }",
 			"forcedBindings": {
 				"observation": {
 					"type": "uri"
 				},
-				"from" : {
-					"type" : "literal",
-					"datatype" : "xsd:dateTime"
+				"from": {
+					"type": "literal",
+					"datatype": "xsd:dateTime"
 				},
-				"to" : {
-					"type" : "literal",
-					"datatype" : "xsd:dateTime"
+				"to": {
+					"type": "literal",
+					"datatype": "xsd:dateTime"
 				}
 			}
 		},
 		"FROM_FORECAST": {
-			"host" : "mml.arces.unibo.it",
-			"sparql11protocol" : {"port" : 8666},
+			"host": "mml.arces.unibo.it",
+			"sparql11protocol": {
+				"port": 8666
+			},
 			"sparql": "SELECT * WHERE {GRAPH <http://wot.arces.unibo.it/forecast> { ?forecast rdf:type sosa:Observation ; rdf:type swamp:Forecast; sosa:hasFeatureOfInterest ?place ; sosa:observedProperty ?property ; sosa:resultTime ?time ; sosa:phenomenonTime ?ptime ; sosa:hasResult ?result . ?result rdf:type qudt:QuantityValue ; rdf:type sosa:Result ; qudt:unit ?unit ; qudt:numericValue ?value} }",
 			"forcedBindings": {
 				"place": {

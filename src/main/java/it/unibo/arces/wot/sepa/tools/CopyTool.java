@@ -23,10 +23,10 @@ public class CopyTool {
 	private static final Logger logger = LogManager.getLogger();
 	
 	public static void copyObservationHistory(String observation,String from,String to) throws SEPAPropertiesException, SEPASecurityException, SEPAProtocolException, SEPABindingsException, IOException {
-		JSAP jsap = new JSAP("copy.jsap");
+		JSAP jsap = new JSAP("utility.jsap");
 		ArrayList<Bindings> failedUpd = new ArrayList<Bindings>();
 		
-		GenericClient client = new GenericClient(jsap);
+		GenericClient client = new GenericClient(jsap,null,null);
 		
 		// --- QUERY SOURCE
 		Bindings fb = new Bindings();
@@ -79,7 +79,7 @@ public class CopyTool {
 		JSAP jsap = new JSAP("copy.jsap");
 		ArrayList<Bindings> failedUpd = new ArrayList<Bindings>();
 		
-		GenericClient client = new GenericClient(jsap);
+		GenericClient client = new GenericClient(jsap,null,null);
 		
 		// --- QUERY SOURCE
 		Bindings fb = new Bindings();

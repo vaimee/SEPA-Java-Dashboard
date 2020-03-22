@@ -94,6 +94,7 @@ import it.unibo.arces.wot.sepa.commons.security.ClientSecurityManager;
 import it.unibo.arces.wot.sepa.commons.sparql.ARBindingsResults;
 import it.unibo.arces.wot.sepa.commons.sparql.Bindings;
 import it.unibo.arces.wot.sepa.commons.sparql.BindingsResults;
+import it.unibo.arces.wot.sepa.commons.sparql.RDFTerm;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermBNode;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermLiteral;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermURI;
@@ -119,6 +120,13 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import javax.swing.JTree;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.DefaultMutableTreeNode;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.event.TreeSelectionEvent;
 
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
@@ -138,6 +146,8 @@ public class Dashboard implements LoginListener {
 
 	private BindingsTableModel bindingsDM = new BindingsTableModel();
 	private BindingsRender bindingsRender = new BindingsRender();
+	private InstanceTableModel tableInstancePropertiesDataModel = new InstanceTableModel();
+	private GraphTableModel graphs = new GraphTableModel();
 
 	private ForcedBindingsTableModel updateForcedBindingsDM = new ForcedBindingsTableModel();
 	private ForcedBindingsTableModel subscribeForcedBindingsDM = new ForcedBindingsTableModel();
@@ -202,11 +212,12 @@ public class Dashboard implements LoginListener {
 
 	private ArrayList<String> jsapFiles = new ArrayList<String>();
 
-	private enum SUB_OP {
-		SUB, UNSUB, NONE
-	};
+	private JTree explorerTree;
+	private JTable tableInstanceProperties;
+	private ArrayList<RDFTerm> navStack = new ArrayList<RDFTerm>();
 
-	private SUB_OP subOp = SUB_OP.NONE;
+	private JLabel currentSubject;
+	private JTable graphsTable;
 
 	class DashboardHandler implements ISubscriptionHandler {
 		protected String unsubSpuid;
@@ -241,43 +252,43 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public void onBrokenConnection() {
-
+			logger.error("*** BROKEN CONNECTION ***");
 		}
 
 		@Override
 		public void onError(ErrorResponse errorResponse) {
 			logger.error(errorResponse);
 
-			// REFRESH TOKEN FROM SUBSCRIPTION
-			if (appProfile.isSecure() && errorResponse.isTokenExpiredError()) {
-				try {
-					Response ret = sm.refreshToken();
-					logger.debug(ret);
-				} catch (SEPAPropertiesException | SEPASecurityException e) {
-					logger.error(e.getMessage());
-					if (logger.isTraceEnabled())
-						e.printStackTrace();
-					return;
-				}
-
-				try {
-					if (subOp.equals(SUB_OP.SUB))
-						subscribe();
-					else if (subOp.equals(SUB_OP.UNSUB))
-						sepaClient.unsubscribe(unsubSpuid, Integer.parseInt(timeout.getText()));
-
-				} catch (NumberFormatException | IOException | SEPAPropertiesException | SEPAProtocolException
-						| SEPASecurityException | SEPABindingsException e) {
-					logger.error(e.getMessage());
-					if (logger.isTraceEnabled())
-						e.printStackTrace();
-				}
-			}
+//			// REFRESH TOKEN FROM SUBSCRIPTION
+//			if (appProfile.isSecure() && errorResponse.isTokenExpiredError()) {
+//				try {
+//					Response ret = sm.refreshToken();
+//					logger.debug(ret);
+//				} catch (SEPAPropertiesException | SEPASecurityException e) {
+//					logger.error(e.getMessage());
+//					if (logger.isTraceEnabled())
+//						e.printStackTrace();
+//					return;
+//				}
+//
+//				try {
+//					if (subOp.equals(SUB_OP.SUB))
+//						subscribe();
+//					else if (subOp.equals(SUB_OP.UNSUB))
+//						sepaClient.unsubscribe(unsubSpuid, Integer.parseInt(timeout.getText()));
+//
+//				} catch (NumberFormatException | IOException | SEPAPropertiesException | SEPAProtocolException
+//						| SEPASecurityException | SEPABindingsException e) {
+//					logger.error(e.getMessage());
+//					if (logger.isTraceEnabled())
+//						e.printStackTrace();
+//				}
+//			}
 		}
 
 		@Override
 		public void onSubscribe(String spuid, String alias) {
-			subOp = SUB_OP.NONE;
+//			subOp = SUB_OP.NONE;
 
 			// Subscription panel
 			JPanel sub = new JPanel();
@@ -303,11 +314,11 @@ public class Dashboard implements LoginListener {
 			unsubscribeButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
-						subOp = SUB_OP.UNSUB;
+//						subOp = SUB_OP.UNSUB;
 						unsubSpuid = spuid;
 						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()));
 					} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException
-							| SEPAProtocolException e1) {
+							| SEPAProtocolException | InterruptedException e1) {
 						logger.error(e1.getMessage());
 					}
 				}
@@ -347,7 +358,7 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public void onUnsubscribe(String spuid) {
-			subOp = SUB_OP.NONE;
+//			subOp = SUB_OP.NONE;
 
 			subscriptionsPanel.remove(subscriptions.get(spuid));
 			subscriptions.remove(spuid);
@@ -405,10 +416,10 @@ public class Dashboard implements LoginListener {
 			final JTable tbl = (JTable) e.getSource();
 
 			StringBuffer sbf = new StringBuffer();
-			
+
 			int[] rowsselected = tbl.getSelectedRows();
 			int[] colsselected = tbl.getSelectedColumns();
-			
+
 			for (int i = 0; i < rowsselected.length; i++) {
 				for (int j = 0; j < colsselected.length; j++) {
 					TableCellRenderer renderer = tbl.getCellRenderer(rowsselected[i], colsselected[j]);
@@ -418,7 +429,8 @@ public class Dashboard implements LoginListener {
 					if (j < colsselected.length - 1)
 						sbf.append("\t");
 				}
-				if (i < rowsselected.length -1) sbf.append("\n");
+				if (i < rowsselected.length - 1)
+					sbf.append("\n");
 			}
 			StringSelection stsel = new StringSelection(sbf.toString());
 			Clipboard system = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -500,6 +512,9 @@ public class Dashboard implements LoginListener {
 		public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
 			super.setValueAt(aValue, rowIndex, columnIndex);
 
+			if (rowIndex > rowValues.size() - 1)
+				return;
+
 			if (columnIndex == 1) {
 				String[] currentValue = rowValues.get(rowIndex);
 				currentValue[1] = (String) aValue;
@@ -523,7 +538,7 @@ public class Dashboard implements LoginListener {
 
 	}
 
-	private class BindingValue {
+	private class BindingValue implements Comparable<BindingValue> {
 		private boolean added = true;
 		private String value;
 		private boolean literal = true;
@@ -551,6 +566,11 @@ public class Dashboard implements LoginListener {
 
 		public boolean isLiteral() {
 			return literal;
+		}
+
+		@Override
+		public int compareTo(BindingValue o) {
+			return value.compareTo(o.get());
 		}
 	}
 
@@ -694,6 +714,129 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
+	private class GraphTableModel extends AbstractTableModel {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -72022807754650051L;
+		private ArrayList<String> uriArrayList = new ArrayList<>();
+		private ArrayList<Integer> counterArrayList = new ArrayList<>();
+
+		private String[] columnStrings = { "Named graph URI", "Triples" };
+		
+		public String getColumnName(int col) {
+			return columnStrings[col];
+		}
+		
+		@Override
+		public int getRowCount() {
+			return uriArrayList.size();
+		}
+
+		@Override
+		public int getColumnCount() {
+			return 2;
+		}
+
+		@Override
+		public Object getValueAt(int rowIndex, int columnIndex) {
+			if (columnIndex == 0)
+				return uriArrayList.get(rowIndex);
+			return counterArrayList.get(rowIndex);
+		}
+
+		public void addRow(String uri, Integer count) {
+			uriArrayList.add(uri);
+			counterArrayList.add(count);
+			fireTableDataChanged();
+		}
+	}
+
+	private class InstanceTableModel extends AbstractTableModel {
+
+		private String[] columnStrings = { "Predicate", "Object", "Datatype" };
+		private ArrayList<Bindings> rows = new ArrayList<Bindings>();
+
+		private static final long serialVersionUID = 1L;
+
+		public String getColumnName(int col) {
+			return columnStrings[col];
+		}
+
+		public int getRowCount() {
+			return rows.size();
+		}
+
+		public int getColumnCount() {
+			return columnStrings.length;
+		}
+
+		public Object getValueAt(int row, int col) {
+			if (col == 0)
+				return rows.get(row).getValue("predicate");
+			else if (col == 1)
+				return rows.get(row).getValue("object");
+			else {
+				try {
+					if (rows.get(row).getRDFTerm("object").isURI())
+						return "URI";
+					if (rows.get(row).getRDFTerm("object").isBNode())
+						return "BNODE";
+				} catch (SEPABindingsException e) {
+					logger.error(e.getMessage());
+					return "???";
+				}
+				return rows.get(row).getDatatype("object");
+			}
+		}
+
+		public boolean isCellEditable(int row, int col) {
+			if (col == 1)
+				return true;
+			return false;
+		}
+
+		public void setValueAt(Object value, int row, int col) {
+			Bindings newBindings = new Bindings();
+			
+			String graphString = (String) graphs.getValueAt(graphsTable.getSelectedRow(), 0);
+			
+			newBindings.addBinding("graph", new RDFTermURI(graphString));
+
+			try {
+				newBindings.addBinding("predicate", rows.get(row).getRDFTerm("predicate"));
+				newBindings.addBinding("subject", new RDFTermURI(currentSubject.getText()));
+
+				if (rows.get(row).getRDFTerm("object").isLiteral()) {
+					newBindings.addBinding("object", new RDFTermLiteral((String) value));
+					sepaClient.update("UPDATE_LITERAL", newBindings, 5000);
+				} else {
+					newBindings.addBinding("object", new RDFTermURI((String) value));
+					sepaClient.update("UPDATE_URI", newBindings, 5000);
+				}
+			} catch (SEPABindingsException | SEPAProtocolException | SEPASecurityException | IOException
+					| SEPAPropertiesException e) {
+				logger.error(e.getMessage());
+				if (logger.isTraceEnabled())
+					e.printStackTrace();
+				return;
+			}
+			rows.remove(row);
+			rows.add(row, newBindings);
+			fireTableCellUpdated(row, col);
+		}
+
+		public void clear() {
+			rows.clear();
+			super.fireTableDataChanged();
+		}
+
+		public void addRow(Bindings b) {
+			rows.add(b);
+		}
+
+	}
+
 	private class ForcedBindingsRenderer extends DefaultTableCellRenderer {
 		/**
 		 * 
@@ -734,7 +877,7 @@ public class Dashboard implements LoginListener {
 
 		DefaultTableModel namespaces;
 		private boolean showAsQname = true;
-		private boolean showDataType =true;
+		private boolean showDataType = true;
 
 		public BindingsRender() {
 			super();
@@ -747,7 +890,7 @@ public class Dashboard implements LoginListener {
 		public void showAsQName(boolean set) {
 			showAsQname = set;
 		}
-		
+
 		public void showDataType(boolean show) {
 			showDataType = show;
 		}
@@ -852,6 +995,8 @@ public class Dashboard implements LoginListener {
 	/**
 	 * Create the application.
 	 * 
+	 * @throws SEPAPropertiesException
+	 * 
 	 * @throws BadPaddingException
 	 * @throws IllegalBlockSizeException
 	 * @throws NoSuchPaddingException
@@ -861,13 +1006,13 @@ public class Dashboard implements LoginListener {
 	 * @throws NoSuchAlgorithmException
 	 * @throws IllegalArgumentException
 	 */
-	public Dashboard() {
+	public Dashboard() throws SEPAPropertiesException {
 		initialize();
 
 		loadSAP(null, true);
 	}
 
-	private boolean loadSAP(String file, boolean load) {
+	private boolean loadSAP(String file, boolean load) throws SEPAPropertiesException {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
@@ -992,7 +1137,7 @@ public class Dashboard implements LoginListener {
 			}
 
 			try {
-				sepaClient = new GenericClient(appProfile, sm);
+				sepaClient = new GenericClient(appProfile, sm, handler);
 			} catch (SEPAProtocolException e) {
 				logger.error(e.getMessage());
 				return false;
@@ -1003,7 +1148,7 @@ public class Dashboard implements LoginListener {
 		} else {
 
 			try {
-				sepaClient = new GenericClient(appProfile);
+				sepaClient = new GenericClient(appProfile, null, handler);
 			} catch (SEPAProtocolException e) {
 				logger.error(e.getMessage());
 				return false;
@@ -1533,7 +1678,7 @@ public class Dashboard implements LoginListener {
 				try {
 					subscribe();
 				} catch (IOException | SEPAPropertiesException | NumberFormatException | SEPAProtocolException
-						| SEPASecurityException | SEPABindingsException e1) {
+						| SEPASecurityException | SEPABindingsException | InterruptedException e1) {
 					logger.error(e1.getMessage());
 				}
 			}
@@ -1550,18 +1695,17 @@ public class Dashboard implements LoginListener {
 		sparqlTab.add(results, gbc_results);
 
 		bindingsResultsTable = new JTable(bindingsDM);
-		results.setViewportView(bindingsResultsTable);
 		bindingsResultsTable.setBorder(UIManager.getBorder("Button.border"));
 		bindingsResultsTable.setFillsViewportHeight(true);
 		bindingsResultsTable.setDefaultRenderer(BindingValue.class, bindingsRender);
-
+		bindingsResultsTable.setAutoCreateRowSorter(true);
+		bindingsResultsTable.setCellSelectionEnabled(true);
+		bindingsResultsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 		bindingsResultsTable.registerKeyboardAction(new CopyAction(),
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
 				JComponent.WHEN_FOCUSED);
 
-		bindingsResultsTable.setCellSelectionEnabled(true);
-		bindingsResultsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
+		results.setViewportView(bindingsResultsTable);
 		bindingsRender.setNamespaces(namespacesDM);
 
 		mainTabs.addTab("Active subscriptions", null, subscriptionsPanel, null);
@@ -1587,6 +1731,343 @@ public class Dashboard implements LoginListener {
 
 		namespacesTable = new JTable(namespacesDM);
 		scrollPane_4.setViewportView(namespacesTable);
+
+		JPanel explorerPanel = new JPanel();
+		explorerPanel.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentShown(ComponentEvent e) {
+				try {
+					if (graphs.getRowCount() !=0) return;
+					
+					Response retResponse = sepaClient.query("GRAPHS", null, 5000);
+					if (retResponse.isError()) {
+						logger.error(retResponse);
+					} else {
+						QueryResponse response = (QueryResponse) retResponse;
+						for (Bindings bindings : response.getBindingsResults().getBindings()) {
+							graphs.addRow(bindings.getValue("graph"), Integer.parseInt(bindings.getValue("count")));
+						}
+					}
+				} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+						| SEPABindingsException e1) {
+					logger.error(e1.getMessage());
+					if (logger.isTraceEnabled())
+						e1.printStackTrace();
+				}
+			}
+		});
+		mainTabs.addTab("Explorer", null, explorerPanel, null);
+		GridBagLayout gbl_explorerPanel = new GridBagLayout();
+		gbl_explorerPanel.columnWidths = new int[] { 0, 0 };
+		gbl_explorerPanel.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_explorerPanel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_explorerPanel.rowWeights = new double[] { 0.0, 1.0, 1.0, Double.MIN_VALUE };
+		explorerPanel.setLayout(gbl_explorerPanel);
+
+		JLabel lblGraphs = new JLabel("Graphs");
+		lblGraphs.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		GridBagConstraints gbc_lblGraphs = new GridBagConstraints();
+		gbc_lblGraphs.insets = new Insets(0, 0, 5, 0);
+		gbc_lblGraphs.gridx = 0;
+		gbc_lblGraphs.gridy = 0;
+		explorerPanel.add(lblGraphs, gbc_lblGraphs);
+
+		JScrollPane scrollPane_9 = new JScrollPane();
+		GridBagConstraints gbc_scrollPane_9 = new GridBagConstraints();
+		gbc_scrollPane_9.fill = GridBagConstraints.BOTH;
+		gbc_scrollPane_9.insets = new Insets(0, 0, 5, 0);
+		gbc_scrollPane_9.gridx = 0;
+		gbc_scrollPane_9.gridy = 1;
+		explorerPanel.add(scrollPane_9, gbc_scrollPane_9);
+
+		graphsTable = new JTable(graphs);
+		scrollPane_9.setViewportView(graphsTable);
+		graphsTable.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				int row = graphsTable.getSelectedRow();
+				String graphUri = (String) graphs.getValueAt(row, 0);
+				
+				Bindings forced = new Bindings();
+				forced.addBinding("graph", new RDFTermURI(graphUri));
+
+				try {
+					Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
+
+					if (retResponse.isError()) {
+						logger.error(retResponse);
+					} else {
+						DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
+						DefaultMutableTreeNode node = (DefaultMutableTreeNode) model.getRoot();
+						
+						node.removeAllChildren();
+						model.reload();
+						
+						QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+						for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node,
+									node.getChildCount());
+						}
+					}
+				} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+						| SEPABindingsException e1) {
+					logger.error(e1.getMessage());
+					if (logger.isTraceEnabled()) e1.printStackTrace();
+				}
+			}
+		});
+
+		JSplitPane splitPane = new JSplitPane();
+		GridBagConstraints gbc_splitPane = new GridBagConstraints();
+		gbc_splitPane.fill = GridBagConstraints.BOTH;
+		gbc_splitPane.gridx = 0;
+		gbc_splitPane.gridy = 2;
+		explorerPanel.add(splitPane, gbc_splitPane);
+
+		JPanel panel = new JPanel();
+		splitPane.setLeftComponent(panel);
+		GridBagLayout gbl_panel = new GridBagLayout();
+		gbl_panel.columnWidths = new int[] { 264, 0 };
+		gbl_panel.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_panel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panel.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
+		panel.setLayout(gbl_panel);
+
+		JLabel lblNewLabel = new JLabel("Classe tree");
+		lblNewLabel.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		GridBagConstraints gbc_lblNewLabel = new GridBagConstraints();
+		gbc_lblNewLabel.insets = new Insets(0, 0, 5, 0);
+		gbc_lblNewLabel.gridx = 0;
+		gbc_lblNewLabel.gridy = 0;
+		panel.add(lblNewLabel, gbc_lblNewLabel);
+
+		JScrollPane scrollPane_7 = new JScrollPane();
+		GridBagConstraints gbc_scrollPane_7 = new GridBagConstraints();
+		gbc_scrollPane_7.fill = GridBagConstraints.BOTH;
+		gbc_scrollPane_7.gridx = 0;
+		gbc_scrollPane_7.gridy = 2;
+		panel.add(scrollPane_7, gbc_scrollPane_7);
+		
+		explorerTree = new JTree();
+		scrollPane_7.setViewportView(explorerTree);
+		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
+			public void valueChanged(TreeSelectionEvent e) {
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) explorerTree.getLastSelectedPathComponent();
+				DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
+
+				if (node == null)
+					// Nothing is selected.
+					return;
+
+				if (node.isRoot())
+					return;
+
+				Bindings nodeInfo = (Bindings) node.getUserObject();
+
+				if (nodeInfo.getValue("class") != null) {
+					node.removeAllChildren();
+					model.reload();
+
+					Bindings forced = new Bindings();
+					forced.addBinding("top", new RDFTermURI(nodeInfo.getValue("class")));
+
+					try {
+						Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
+
+						if (retResponse.isError()) {
+							logger.error(retResponse);
+						} else {
+							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+								if (valueBindings.isURI("instance"))
+									model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node,
+											node.getChildCount());
+							}
+						}
+
+						forced = new Bindings();
+						forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
+
+						retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
+						if (retResponse.isError()) {
+							logger.error(retResponse);
+						} else {
+							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+								if (valueBindings.isURI("instance"))
+									model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node,
+											node.getChildCount());
+							}
+						}
+
+					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+							| SEPABindingsException e1) {
+						logger.error(e1.getMessage());
+						if (logger.isTraceEnabled()) e1.printStackTrace();
+					}
+				} else if (nodeInfo.getValue("instance") != null) {
+					RDFTerm sub = new RDFTermURI(nodeInfo.getValue("instance"));
+					RDFTerm graph = new RDFTermURI((String) graphs.getValueAt(graphsTable.getSelectedRow(),0));
+					
+					Bindings forced = new Bindings();
+					forced.addBinding("subject", sub);
+					forced.addBinding("graph", graph);
+					
+					currentSubject.setText(sub.getValue());
+					navStack.clear();
+
+					Response retResponse;
+					try {
+						retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+						if (retResponse.isError()) {
+							logger.error(retResponse);
+						} else {
+							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+							tableInstancePropertiesDataModel.clear();
+							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+								tableInstancePropertiesDataModel.addRow(valueBindings);
+							}
+						}
+					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+							| SEPABindingsException e1) {
+						logger.error(e1.getMessage());
+						if (logger.isTraceEnabled()) e1.printStackTrace();
+					}
+
+				}
+
+			}
+		});
+		explorerTree.setModel(new DefaultTreeModel(new DefaultMutableTreeNode("owl:Thing") {
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -2640698448157863184L;
+
+			{
+			}
+		}));
+
+		JPanel panel_1 = new JPanel();
+		splitPane.setRightComponent(panel_1);
+		GridBagLayout gbl_panel_1 = new GridBagLayout();
+		gbl_panel_1.columnWidths = new int[] { 0, 0, 0 };
+		gbl_panel_1.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_panel_1.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
+		panel_1.setLayout(gbl_panel_1);
+
+		JLabel lblProperties = new JLabel("Properties");
+		GridBagConstraints gbc_lblProperties = new GridBagConstraints();
+		gbc_lblProperties.insets = new Insets(0, 0, 5, 5);
+		gbc_lblProperties.gridx = 1;
+		gbc_lblProperties.gridy = 0;
+		panel_1.add(lblProperties, gbc_lblProperties);
+		lblProperties.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+
+		JButton buttonStackBackward = new JButton("Back");
+		GridBagConstraints gbc_buttonStackBackward = new GridBagConstraints();
+		gbc_buttonStackBackward.anchor = GridBagConstraints.WEST;
+		gbc_buttonStackBackward.insets = new Insets(0, 0, 5, 5);
+		gbc_buttonStackBackward.gridx = 0;
+		gbc_buttonStackBackward.gridy = 1;
+		panel_1.add(buttonStackBackward, gbc_buttonStackBackward);
+
+		currentSubject = new JLabel("uri");
+		GridBagConstraints gbc_currentSubject = new GridBagConstraints();
+		gbc_currentSubject.insets = new Insets(0, 0, 5, 0);
+		gbc_currentSubject.gridx = 1;
+		gbc_currentSubject.gridy = 1;
+		panel_1.add(currentSubject, gbc_currentSubject);
+
+		JScrollPane scrollPane_8 = new JScrollPane();
+		GridBagConstraints gbc_scrollPane_8 = new GridBagConstraints();
+		gbc_scrollPane_8.fill = GridBagConstraints.BOTH;
+		gbc_scrollPane_8.gridwidth = 2;
+		gbc_scrollPane_8.insets = new Insets(0, 0, 0, 5);
+		gbc_scrollPane_8.gridx = 0;
+		gbc_scrollPane_8.gridy = 2;
+		panel_1.add(scrollPane_8, gbc_scrollPane_8);
+
+		tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
+		tableInstanceProperties.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				logger.debug(e);
+				if (e.getClickCount() == 2) {
+					if (!tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("URI")
+							&& !tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2)
+									.equals("BNODE"))
+						return;
+
+					Bindings forced = new Bindings();
+					RDFTerm sub = new RDFTermURI(
+							(String) tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 1));
+					forced.addBinding("subject", sub);
+
+					Response retResponse;
+					try {
+						retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+						if (retResponse.isError()) {
+							logger.error(retResponse);
+						} else {
+							RDFTerm back = new RDFTermURI(currentSubject.getText());
+							navStack.add(back);
+							currentSubject.setText(sub.getValue());
+							buttonStackBackward.setVisible(true);
+
+							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+							tableInstancePropertiesDataModel.clear();
+							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+								tableInstancePropertiesDataModel.addRow(valueBindings);
+							}
+						}
+					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+							| SEPABindingsException e1) {
+						logger.error(e1.getMessage());
+						if (logger.isTraceEnabled()) e1.printStackTrace();
+					}
+				}
+			}
+		});
+		scrollPane_8.setViewportView(tableInstanceProperties);
+		buttonStackBackward.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				Bindings forced = new Bindings();
+				RDFTerm sub = navStack.get(navStack.size() - 1);
+				forced.addBinding("subject", sub);
+
+				Response retResponse;
+				try {
+					retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+					if (retResponse.isError()) {
+						logger.error(retResponse);
+					} else {
+						currentSubject.setText(sub.getValue());
+						navStack.remove(navStack.size() - 1);
+						if (navStack.isEmpty())
+							buttonStackBackward.setVisible(false);
+
+						QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+						tableInstancePropertiesDataModel.clear();
+						for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+							tableInstancePropertiesDataModel.addRow(valueBindings);
+						}
+					}
+				} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+						| SEPABindingsException e1) {
+					logger.error(e1.getMessage());
+					if (logger.isTraceEnabled()) e1.printStackTrace();
+				}
+			}
+		});
+		buttonStackBackward.setVisible(false);
 
 		JScrollPane scrollPane_5 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
@@ -1645,39 +2126,45 @@ public class Dashboard implements LoginListener {
 						jsapFiles.remove(fileName);
 					}
 
-					if (loadSAP(fileName, !chckbxMerge.isSelected())) {
-						FileOutputStream out = null;
-						try {
-							out = new FileOutputStream("dashboard.properties");
-						} catch (FileNotFoundException e3) {
-							logger.error(e3.getMessage());
-							return;
-						}
+					try {
+						if (loadSAP(fileName, !chckbxMerge.isSelected())) {
+							FileOutputStream out = null;
+							try {
+								out = new FileOutputStream("dashboard.properties");
+							} catch (FileNotFoundException e3) {
+								logger.error(e3.getMessage());
+								return;
+							}
 
-						String path = "";
-						for (int i = 0; i < jsapFiles.size(); i++) {
-							if (i == 0)
-								path = jsapFiles.get(i);
-							else
-								path = path + "," + jsapFiles.get(i);
-						}
+							String path = "";
+							for (int i = 0; i < jsapFiles.size(); i++) {
+								if (i == 0)
+									path = jsapFiles.get(i);
+								else
+									path = path + "," + jsapFiles.get(i);
+							}
 
-						appProperties = new Properties();
-						appProperties.put("appProfile", path);
-						appProperties.put("jksName", jksName);
-						appProperties.put("jksPass", jksPass);
+							appProperties = new Properties();
+							appProperties.put("appProfile", path);
+							appProperties.put("jksName", jksName);
+							appProperties.put("jksPass", jksPass);
 
-						try {
-							appProperties.store(out, "Dashboard properties");
-						} catch (IOException e1) {
-							logger.error(e1.getMessage());
-						}
-						try {
-							out.close();
-						} catch (IOException e2) {
-							logger.error(e2.getMessage());
-						}
+							try {
+								appProperties.store(out, "Dashboard properties");
+							} catch (IOException e1) {
+								logger.error(e1.getMessage());
+							}
+							try {
+								out.close();
+							} catch (IOException e2) {
+								logger.error(e2.getMessage());
+							}
 
+						}
+					} catch (SEPAPropertiesException e1) {
+						logger.error(e1.getMessage());
+						if (logger.isTraceEnabled())
+							e1.printStackTrace();
 					}
 				}
 			}
@@ -1707,7 +2194,7 @@ public class Dashboard implements LoginListener {
 		gbc_btnLogout.gridx = 2;
 		gbc_btnLogout.gridy = 0;
 		infoPanel.add(btnLogout, gbc_btnLogout);
-		
+
 		JCheckBox chckbxDatatype = new JCheckBox("Datatype");
 		chckbxDatatype.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
@@ -1718,25 +2205,25 @@ public class Dashboard implements LoginListener {
 				}
 			}
 		});
-						
-								JLabel lblToms = new JLabel("Timeout (ms)");
-								GridBagConstraints gbc_lblToms = new GridBagConstraints();
-								gbc_lblToms.anchor = GridBagConstraints.EAST;
-								gbc_lblToms.insets = new Insets(0, 0, 0, 5);
-								gbc_lblToms.gridx = 3;
-								gbc_lblToms.gridy = 0;
-								infoPanel.add(lblToms, gbc_lblToms);
-								lblToms.setForeground(Color.BLACK);
-		
-				timeout = new JTextField();
-				GridBagConstraints gbc_timeout = new GridBagConstraints();
-				gbc_timeout.anchor = GridBagConstraints.EAST;
-				gbc_timeout.insets = new Insets(0, 0, 0, 5);
-				gbc_timeout.gridx = 4;
-				gbc_timeout.gridy = 0;
-				infoPanel.add(timeout, gbc_timeout);
-				timeout.setText("5000");
-				timeout.setColumns(10);
+
+		JLabel lblToms = new JLabel("Timeout (ms)");
+		GridBagConstraints gbc_lblToms = new GridBagConstraints();
+		gbc_lblToms.anchor = GridBagConstraints.EAST;
+		gbc_lblToms.insets = new Insets(0, 0, 0, 5);
+		gbc_lblToms.gridx = 3;
+		gbc_lblToms.gridy = 0;
+		infoPanel.add(lblToms, gbc_lblToms);
+		lblToms.setForeground(Color.BLACK);
+
+		timeout = new JTextField();
+		GridBagConstraints gbc_timeout = new GridBagConstraints();
+		gbc_timeout.anchor = GridBagConstraints.EAST;
+		gbc_timeout.insets = new Insets(0, 0, 0, 5);
+		gbc_timeout.gridx = 4;
+		gbc_timeout.gridy = 0;
+		infoPanel.add(timeout, gbc_timeout);
+		timeout.setText("5000");
+		timeout.setColumns(10);
 		chckbxDatatype.setSelected(true);
 		GridBagConstraints gbc_chckbxDatatype = new GridBagConstraints();
 		gbc_chckbxDatatype.insets = new Insets(0, 0, 0, 5);
@@ -1803,7 +2290,9 @@ public class Dashboard implements LoginListener {
 	}
 
 	protected void subscribe() throws IOException, SEPAPropertiesException, NumberFormatException,
-			SEPAProtocolException, SEPASecurityException, SEPABindingsException {
+			SEPAProtocolException, SEPASecurityException, SEPABindingsException, InterruptedException {
+//		subOp = SUB_OP.SUB;
+
 		Bindings bindings = new Bindings();
 		for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
 			String type;
@@ -1821,7 +2310,7 @@ public class Dashboard implements LoginListener {
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
 		}
 
-		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, handler, Integer.parseInt(timeout.getText()));
+		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, Integer.parseInt(timeout.getText()));
 	}
 
 	protected void query() throws SEPAPropertiesException, SEPABindingsException {
@@ -2110,8 +2599,7 @@ public class Dashboard implements LoginListener {
 
 	@Override
 	public void onRegister() {
-		// TODO Auto-generated method stub
-
+		logger.info("Registered!");
 	}
 
 	@Override
@@ -2121,7 +2609,6 @@ public class Dashboard implements LoginListener {
 
 	@Override
 	public void onLoginError(ErrorResponse err) {
-		// TODO Auto-generated method stub
-
+		logger.error(err);
 	}
 }

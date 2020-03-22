@@ -43,7 +43,7 @@ public class TimezoneFix {
 			SEPABindingsException, IOException {
 		JSAP jsap = new JSAP("base.jsap");
 
-		GenericClient client = new GenericClient(jsap);
+		GenericClient client = new GenericClient(jsap,null,null);
 
 		Calendar from = GregorianCalendar.getInstance(TimeZone.getTimeZone("GMT"));
 		Calendar to = GregorianCalendar.getInstance(TimeZone.getTimeZone("GMT"));

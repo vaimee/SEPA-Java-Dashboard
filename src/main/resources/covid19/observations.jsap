@@ -1,0 +1,50 @@
+{
+	"updates": {
+		"ADD_OBSERVATION": {
+			"sparql": "INSERT {GRAPH <http://covid19/observation> {_:obs rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property}} WHERE {}",
+			"forcedBindings": {
+				"place": {
+					"type": "uri",
+					"value": "covid19:Mars"
+				},
+				"value": {
+					"type": "literal",
+					"value": "unit:DegreeCelsius"
+				},
+				"timestamp" : {
+					"type" : "literal",
+					"datatype" : "xsd:dateTime",
+					"value" : "2020-03-21T17:00:00Z"
+				},
+				"property": {
+					"type": "uri",
+					"value": "covid19:Recovered"
+				}
+			}
+		},
+		"ADD_OBSERVABLE_PROPERTY": {
+			"sparql": "INSERT DATA {GRAPH <http://covid19/observation> {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}}",
+			"forcedBindings": {
+				"property": {
+					"type": "uri",
+					"value": "covid19:HospitalisedWithSymptoms"
+				},
+				"label": {
+					"type": "literal",
+					"value": "Ospedalizzati con sintomi"
+				}
+			}
+		}
+	},
+	"queries": {
+		"OBSERVATIONS_COUNT": {
+			"sparql": "SELECT (COUNT(?observation) AS ?count) WHERE {GRAPH <http://covid19/observation> {?observation rdf:type sosa:Observation}}"
+		},
+		"OBSERVATIONS": {
+			"sparql": "SELECT * WHERE {GRAPH <http://covid19/observation> {?observation rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property . ?property rdfs:label ?label} GRAPH <http://covid19/context> {?place gn:name ?name ;  gn:lat ?lat ; gn:long ?lon}}"
+		},
+		"OBSERVABLE_PROPERTIES": {
+			"sparql": "SELECT * WHERE {GRAPH <http://covid19/observation> {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}}"
+		}
+	}
+}
