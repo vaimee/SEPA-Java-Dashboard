@@ -1835,17 +1835,17 @@ public class Dashboard implements LoginListener {
 		explorerPanel.add(scrollPane_9, gbc_scrollPane_9);
 
 		graphsTable = new JTable(graphs);
-		TableRowSorter<TableModel> sorter  = new TableRowSorter<TableModel>(graphsTable.getModel());
+		TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(graphsTable.getModel());
 		Comparator<Integer> compare = new Comparator<Integer>() {
 			@Override
 			public int compare(Integer o1, Integer o2) {
 				return o1.compareTo(o2);
 			}
 		};
-		sorter.setComparator(1,compare); 
+		sorter.setComparator(1, compare);
 		graphsTable.setRowSorter(sorter);
-	
-		//graphsTable.setAutoCreateRowSorter(true);
+
+		// graphsTable.setAutoCreateRowSorter(true);
 		scrollPane_9.setViewportView(graphsTable);
 		graphsTable.addMouseListener(new MouseAdapter() {
 			@Override
@@ -1887,7 +1887,7 @@ public class Dashboard implements LoginListener {
 
 		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer();
 		explorerTreeRenderer.setNamespaces(namespacesDM);
-		
+
 		explorerTree = new JTree();
 		scrollPane_7.setViewportView(explorerTree);
 		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
@@ -1944,9 +1944,67 @@ public class Dashboard implements LoginListener {
 		tableInstanceProperties.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				onExplorerEditProperties(e);
+				onExplorerPropertiesNavigation(e);
 			}
 		});
+		tableInstanceProperties.getModel().addTableModelListener(new TableModelListener() {
+
+			public void tableChanged(TableModelEvent e) {
+				if (e.getFirstRow() == 0)
+					return;
+				logger.debug("Value: " + tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), e.getColumn()));
+
+				DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) explorerTree
+						.getLastSelectedPathComponent();
+				Bindings nodeInfo = (Bindings) selectedNode.getUserObject();
+
+				String type = (String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 2);
+
+				RDFTerm graph = new RDFTermURI((String) graphs
+						.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
+				RDFTerm subject = new RDFTermURI(nodeInfo.getValue("instance"));
+				RDFTerm predicate = new RDFTermURI(
+						(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 0));
+				RDFTerm object;
+
+				Bindings forcedBindings = new Bindings();
+				forcedBindings.addBinding("graph", graph);
+				forcedBindings.addBinding("subject", subject);
+				forcedBindings.addBinding("predicate", predicate);
+
+				try {
+					Response ret = null;
+	
+					if (type == null) {
+						object = new RDFTermLiteral(
+								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
+						forcedBindings.addBinding("object", object);
+						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);	
+					}
+					else if (type.equals("URI") || type.equals("BNODE")) {
+						object = new RDFTermURI(
+								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
+						forcedBindings.addBinding("object", object);
+						ret = sepaClient.update("UPDATE_URI", forcedBindings, 5000);
+					} else {
+						object = new RDFTermLiteral(
+								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1), type);
+						forcedBindings.addBinding("object", object);
+						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);
+					}
+					
+					if (ret.isError())
+						logger.error(ret);
+
+				} catch (SEPAProtocolException | SEPASecurityException | IOException | SEPAPropertiesException
+						| SEPABindingsException e1) {
+					logger.error(e1.getMessage());
+					if (logger.isTraceEnabled())
+						e1.printStackTrace();
+				}
+			}
+		});
+
 		scrollPane_8.setViewportView(tableInstanceProperties);
 		buttonStackBackward.addMouseListener(new MouseAdapter() {
 			@Override
@@ -2127,8 +2185,9 @@ public class Dashboard implements LoginListener {
 
 		Bindings nodeInfo = (Bindings) node.getUserObject();
 
-		RDFTerm graph = new RDFTermURI((String)  graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
-		
+		RDFTerm graph = new RDFTermURI(
+				(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
+
 		if (nodeInfo.getValue("class") != null) {
 			node.removeAllChildren();
 			model.reload();
@@ -2136,7 +2195,7 @@ public class Dashboard implements LoginListener {
 			Bindings forced = new Bindings();
 			forced.addBinding("top", new RDFTermURI(nodeInfo.getValue("class")));
 			forced.addBinding("graph", graph);
-			
+
 			try {
 				Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
 
@@ -2154,7 +2213,7 @@ public class Dashboard implements LoginListener {
 				forced = new Bindings();
 				forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
 				forced.addBinding("graph", graph);
-				
+
 				retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2236,7 +2295,7 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
-	protected void onExplorerEditProperties(MouseEvent e) {
+	protected void onExplorerPropertiesNavigation(MouseEvent e) {
 		logger.debug(e);
 		if (e.getClickCount() == 2) {
 			if (!tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("URI")
