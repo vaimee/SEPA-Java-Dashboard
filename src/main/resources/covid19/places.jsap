@@ -60,6 +60,9 @@
 		}
 	},
 	"queries": {
+		"REGIONS" : {
+			"sparql": "SELECT ?place ?name FROM <http://covid19/context> WHERE {?place rdf:type gn:Feature ; gn:featureClass 'ADM1' ; gn:name ?name}"
+		},
 		"PLACES_COUNT": {
 			"sparql": "SELECT (COUNT(?place) AS ?count) WHERE {GRAPH <http://covid19/context> {?place rdf:type gn:Feature}}"
 		},
@@ -77,6 +80,9 @@
 					"value": "covid19:Place"
 				}
 			}
+		},
+		"MAP_PLACES_TOTALCASES": {
+				"sparql": "SELECT * WHERE {GRAPH <http://covid19/context> {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . FILTER NOT EXISTS {?place gn:parentFeature ?parent}}GRAPH <http://covid19/observation>{ ?obs rdf:type sosa:Observation; sosa:observedProperty <http://covid19#TotalCases>; sosa:hasSimpleResult ?cases; sosa:hasFeatureOfInterest ?place.} }"
 		}
 	},
 	"extended": {

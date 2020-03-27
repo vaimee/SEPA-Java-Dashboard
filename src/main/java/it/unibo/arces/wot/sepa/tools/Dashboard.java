@@ -48,6 +48,8 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 import javax.xml.datatype.DatatypeFactory;
 
 import org.apache.logging.log4j.LogManager;
@@ -65,6 +67,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JScrollPane;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.SortedSet;
@@ -122,7 +125,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
+
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -201,7 +207,7 @@ public class Dashboard implements LoginListener {
 	private JLabel updateInfo;
 	private JLabel queryInfo;
 
-	JCheckBox chckbxMerge;
+	private JCheckBox chckbxMerge;
 
 	private ClientSecurityManager sm;
 
@@ -218,6 +224,12 @@ public class Dashboard implements LoginListener {
 
 	private JLabel currentSubject;
 	private JTable graphsTable;
+
+	private JButton buttonStackBackward;
+
+	private JCheckBox chckbxDatatype;
+
+	private JCheckBox chckbxQname;
 
 	class DashboardHandler implements ISubscriptionHandler {
 		protected String unsubSpuid;
@@ -723,11 +735,11 @@ public class Dashboard implements LoginListener {
 		private ArrayList<Integer> counterArrayList = new ArrayList<>();
 
 		private String[] columnStrings = { "Named graph URI", "Triples" };
-		
+
 		public String getColumnName(int col) {
 			return columnStrings[col];
 		}
-		
+
 		@Override
 		public int getRowCount() {
 			return uriArrayList.size();
@@ -798,9 +810,9 @@ public class Dashboard implements LoginListener {
 
 		public void setValueAt(Object value, int row, int col) {
 			Bindings newBindings = new Bindings();
-			
+
 			String graphString = (String) graphs.getValueAt(graphsTable.getSelectedRow(), 0);
-			
+
 			newBindings.addBinding("graph", new RDFTermURI(graphString));
 
 			try {
@@ -976,6 +988,78 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
+	private class ExplorerTreeModel extends DefaultTreeModel {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -7082219083126306248L;
+
+		public ExplorerTreeModel(TreeNode root) {
+			super(root);
+		}
+
+		public ExplorerTreeModel() {
+			this(new DefaultMutableTreeNode("owl:Thing") {
+				/**
+				 * 
+				 */
+				private static final long serialVersionUID = -2640698448157863184L;
+
+				{
+				}
+			});
+		}
+
+	}
+
+	class ExplorerTreeRenderer extends DefaultTreeCellRenderer {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 4538238852715730476L;
+
+		DefaultTableModel namespaces;
+
+		public void setNamespaces(DefaultTableModel namespaces) {
+			this.namespaces = namespaces;
+		}
+
+		public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
+				boolean leaf, int row, boolean hasFocus) {
+
+			super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+
+			if (row == 0)
+				return this;
+
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+			Bindings nodeInfo = (Bindings) (node.getUserObject());
+
+			String text = "";
+			if (nodeInfo.getValue("class") != null) {
+				text = nodeInfo.getValue("class");
+			} else {
+				text = nodeInfo.getValue("instance");
+			}
+			setToolTipText(text);
+
+			if (chckbxQname.isSelected()) {
+				for (int r = 0; r < namespaces.getRowCount(); r++) {
+					String prefix = namespaces.getValueAt(r, 0).toString();
+					String ns = namespaces.getValueAt(r, 1).toString();
+					if (text.startsWith(ns)) {
+						text = text.replace(ns, prefix + ":");
+						break;
+					}
+				}
+			}
+			setText(text);
+
+			return this;
+		}
+	}
+
 	/**
 	 * Launch the application.
 	 */
@@ -1012,7 +1096,7 @@ public class Dashboard implements LoginListener {
 		loadSAP(null, true);
 	}
 
-	private boolean loadSAP(String file, boolean load) throws SEPAPropertiesException {
+	protected boolean loadSAP(String file, boolean load) throws SEPAPropertiesException {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
@@ -1188,7 +1272,7 @@ public class Dashboard implements LoginListener {
 	/**
 	 * Initialize the contents of the frame.
 	 */
-	private void initialize() {
+	protected void initialize() {
 		namespacesDM = new DefaultTableModel(0, 0) {
 			private static final long serialVersionUID = 6788045463932990156L;
 
@@ -1607,11 +1691,7 @@ public class Dashboard implements LoginListener {
 		panel_6.add(updateButton, gbc_updateButton);
 		updateButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				try {
-					update();
-				} catch (SEPAPropertiesException | SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-				}
+				onUpdateButton();
 			}
 		});
 		updateButton.setForeground(Color.BLACK);
@@ -1644,11 +1724,7 @@ public class Dashboard implements LoginListener {
 		btnQuery.setEnabled(false);
 		btnQuery.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				try {
-					query();
-				} catch (SEPAPropertiesException | SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-				}
+				onQueryButton();
 			}
 		});
 		GridBagConstraints gbc_btnQuery = new GridBagConstraints();
@@ -1675,12 +1751,7 @@ public class Dashboard implements LoginListener {
 		panel_7.add(subscribeButton, gbc_subscribeButton);
 		subscribeButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				try {
-					subscribe();
-				} catch (IOException | SEPAPropertiesException | NumberFormatException | SEPAProtocolException
-						| SEPASecurityException | SEPABindingsException | InterruptedException e1) {
-					logger.error(e1.getMessage());
-				}
+				onSubscribeButton();
 			}
 		});
 		subscribeButton.setForeground(Color.BLACK);
@@ -1736,24 +1807,7 @@ public class Dashboard implements LoginListener {
 		explorerPanel.addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentShown(ComponentEvent e) {
-				try {
-					if (graphs.getRowCount() !=0) return;
-					
-					Response retResponse = sepaClient.query("GRAPHS", null, 5000);
-					if (retResponse.isError()) {
-						logger.error(retResponse);
-					} else {
-						QueryResponse response = (QueryResponse) retResponse;
-						for (Bindings bindings : response.getBindingsResults().getBindings()) {
-							graphs.addRow(bindings.getValue("graph"), Integer.parseInt(bindings.getValue("count")));
-						}
-					}
-				} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-						| SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-					if (logger.isTraceEnabled())
-						e1.printStackTrace();
-				}
+				onExplorerOpenTab();
 			}
 		});
 		mainTabs.addTab("Explorer", null, explorerPanel, null);
@@ -1781,39 +1835,22 @@ public class Dashboard implements LoginListener {
 		explorerPanel.add(scrollPane_9, gbc_scrollPane_9);
 
 		graphsTable = new JTable(graphs);
+		TableRowSorter<TableModel> sorter  = new TableRowSorter<TableModel>(graphsTable.getModel());
+		Comparator<Integer> compare = new Comparator<Integer>() {
+			@Override
+			public int compare(Integer o1, Integer o2) {
+				return o1.compareTo(o2);
+			}
+		};
+		sorter.setComparator(1,compare); 
+		graphsTable.setRowSorter(sorter);
+	
+		//graphsTable.setAutoCreateRowSorter(true);
 		scrollPane_9.setViewportView(graphsTable);
 		graphsTable.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				int row = graphsTable.getSelectedRow();
-				String graphUri = (String) graphs.getValueAt(row, 0);
-				
-				Bindings forced = new Bindings();
-				forced.addBinding("graph", new RDFTermURI(graphUri));
-
-				try {
-					Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
-
-					if (retResponse.isError()) {
-						logger.error(retResponse);
-					} else {
-						DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
-						DefaultMutableTreeNode node = (DefaultMutableTreeNode) model.getRoot();
-						
-						node.removeAllChildren();
-						model.reload();
-						
-						QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-						for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node,
-									node.getChildCount());
-						}
-					}
-				} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-						| SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-					if (logger.isTraceEnabled()) e1.printStackTrace();
-				}
+				onExloperSelectGraph();
 			}
 		});
 
@@ -1847,109 +1884,20 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_7.gridx = 0;
 		gbc_scrollPane_7.gridy = 2;
 		panel.add(scrollPane_7, gbc_scrollPane_7);
+
+		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer();
+		explorerTreeRenderer.setNamespaces(namespacesDM);
 		
 		explorerTree = new JTree();
 		scrollPane_7.setViewportView(explorerTree);
 		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
 			public void valueChanged(TreeSelectionEvent e) {
-				DefaultMutableTreeNode node = (DefaultMutableTreeNode) explorerTree.getLastSelectedPathComponent();
-				DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
-
-				if (node == null)
-					// Nothing is selected.
-					return;
-
-				if (node.isRoot())
-					return;
-
-				Bindings nodeInfo = (Bindings) node.getUserObject();
-
-				if (nodeInfo.getValue("class") != null) {
-					node.removeAllChildren();
-					model.reload();
-
-					Bindings forced = new Bindings();
-					forced.addBinding("top", new RDFTermURI(nodeInfo.getValue("class")));
-
-					try {
-						Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
-
-						if (retResponse.isError()) {
-							logger.error(retResponse);
-						} else {
-							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-								if (valueBindings.isURI("instance"))
-									model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node,
-											node.getChildCount());
-							}
-						}
-
-						forced = new Bindings();
-						forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
-
-						retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
-						if (retResponse.isError()) {
-							logger.error(retResponse);
-						} else {
-							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-								if (valueBindings.isURI("instance"))
-									model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node,
-											node.getChildCount());
-							}
-						}
-
-					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-							| SEPABindingsException e1) {
-						logger.error(e1.getMessage());
-						if (logger.isTraceEnabled()) e1.printStackTrace();
-					}
-				} else if (nodeInfo.getValue("instance") != null) {
-					RDFTerm sub = new RDFTermURI(nodeInfo.getValue("instance"));
-					RDFTerm graph = new RDFTermURI((String) graphs.getValueAt(graphsTable.getSelectedRow(),0));
-					
-					Bindings forced = new Bindings();
-					forced.addBinding("subject", sub);
-					forced.addBinding("graph", graph);
-					
-					currentSubject.setText(sub.getValue());
-					navStack.clear();
-
-					Response retResponse;
-					try {
-						retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
-						if (retResponse.isError()) {
-							logger.error(retResponse);
-						} else {
-							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-							tableInstancePropertiesDataModel.clear();
-							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-								tableInstancePropertiesDataModel.addRow(valueBindings);
-							}
-						}
-					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-							| SEPABindingsException e1) {
-						logger.error(e1.getMessage());
-						if (logger.isTraceEnabled()) e1.printStackTrace();
-					}
-
-				}
-
+				onExplorerSelectTreeElement(e);
 			}
 		});
-		explorerTree.setModel(new DefaultTreeModel(new DefaultMutableTreeNode("owl:Thing") {
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = -2640698448157863184L;
-
-			{
-			}
-		}));
+		explorerTree.setModel(new ExplorerTreeModel());
+		explorerTree.setCellRenderer(explorerTreeRenderer);
+		ToolTipManager.sharedInstance().registerComponent(explorerTree);
 
 		JPanel panel_1 = new JPanel();
 		splitPane.setRightComponent(panel_1);
@@ -1968,7 +1916,7 @@ public class Dashboard implements LoginListener {
 		panel_1.add(lblProperties, gbc_lblProperties);
 		lblProperties.setFont(new Font("Lucida Grande", Font.BOLD, 13));
 
-		JButton buttonStackBackward = new JButton("Back");
+		buttonStackBackward = new JButton("Back");
 		GridBagConstraints gbc_buttonStackBackward = new GridBagConstraints();
 		gbc_buttonStackBackward.anchor = GridBagConstraints.WEST;
 		gbc_buttonStackBackward.insets = new Insets(0, 0, 5, 5);
@@ -1996,75 +1944,14 @@ public class Dashboard implements LoginListener {
 		tableInstanceProperties.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				logger.debug(e);
-				if (e.getClickCount() == 2) {
-					if (!tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("URI")
-							&& !tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2)
-									.equals("BNODE"))
-						return;
-
-					Bindings forced = new Bindings();
-					RDFTerm sub = new RDFTermURI(
-							(String) tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 1));
-					forced.addBinding("subject", sub);
-
-					Response retResponse;
-					try {
-						retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
-						if (retResponse.isError()) {
-							logger.error(retResponse);
-						} else {
-							RDFTerm back = new RDFTermURI(currentSubject.getText());
-							navStack.add(back);
-							currentSubject.setText(sub.getValue());
-							buttonStackBackward.setVisible(true);
-
-							QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-							tableInstancePropertiesDataModel.clear();
-							for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-								tableInstancePropertiesDataModel.addRow(valueBindings);
-							}
-						}
-					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-							| SEPABindingsException e1) {
-						logger.error(e1.getMessage());
-						if (logger.isTraceEnabled()) e1.printStackTrace();
-					}
-				}
+				onExplorerEditProperties(e);
 			}
 		});
 		scrollPane_8.setViewportView(tableInstanceProperties);
 		buttonStackBackward.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				Bindings forced = new Bindings();
-				RDFTerm sub = navStack.get(navStack.size() - 1);
-				forced.addBinding("subject", sub);
-
-				Response retResponse;
-				try {
-					retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
-					if (retResponse.isError()) {
-						logger.error(retResponse);
-					} else {
-						currentSubject.setText(sub.getValue());
-						navStack.remove(navStack.size() - 1);
-						if (navStack.isEmpty())
-							buttonStackBackward.setVisible(false);
-
-						QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-						tableInstancePropertiesDataModel.clear();
-						for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-							tableInstancePropertiesDataModel.addRow(valueBindings);
-						}
-					}
-				} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-						| SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-					if (logger.isTraceEnabled()) e1.printStackTrace();
-				}
+				onExplorerBackButton(e);
 			}
 		});
 		buttonStackBackward.setVisible(false);
@@ -2109,64 +1996,7 @@ public class Dashboard implements LoginListener {
 		infoPanel.add(btnLoadXmlProfile, gbc_btnLoadXmlProfile);
 		btnLoadXmlProfile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String openIn = null;
-				if (appProperties.getProperty("appProfile") != null) {
-					String[] profilePath = appProperties.getProperty("appProfile").split(",");
-					openIn = profilePath[profilePath.length - 1];
-				}
-
-				final JFileChooser fc = new JFileChooser(openIn);
-				DashboardFileFilter filter = new DashboardFileFilter("JSON SAP Profile (.jsap)", ".jsap");
-				fc.setFileFilter(filter);
-				int returnVal = fc.showOpenDialog(frmSepaDashboard);
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					String fileName = fc.getSelectedFile().getPath();
-
-					if (jsapFiles.contains(fileName)) {
-						jsapFiles.remove(fileName);
-					}
-
-					try {
-						if (loadSAP(fileName, !chckbxMerge.isSelected())) {
-							FileOutputStream out = null;
-							try {
-								out = new FileOutputStream("dashboard.properties");
-							} catch (FileNotFoundException e3) {
-								logger.error(e3.getMessage());
-								return;
-							}
-
-							String path = "";
-							for (int i = 0; i < jsapFiles.size(); i++) {
-								if (i == 0)
-									path = jsapFiles.get(i);
-								else
-									path = path + "," + jsapFiles.get(i);
-							}
-
-							appProperties = new Properties();
-							appProperties.put("appProfile", path);
-							appProperties.put("jksName", jksName);
-							appProperties.put("jksPass", jksPass);
-
-							try {
-								appProperties.store(out, "Dashboard properties");
-							} catch (IOException e1) {
-								logger.error(e1.getMessage());
-							}
-							try {
-								out.close();
-							} catch (IOException e2) {
-								logger.error(e2.getMessage());
-							}
-
-						}
-					} catch (SEPAPropertiesException e1) {
-						logger.error(e1.getMessage());
-						if (logger.isTraceEnabled())
-							e1.printStackTrace();
-					}
-				}
+				onLoadJSAPButton();
 			}
 		});
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
@@ -2195,14 +2025,10 @@ public class Dashboard implements LoginListener {
 		gbc_btnLogout.gridy = 0;
 		infoPanel.add(btnLogout, gbc_btnLogout);
 
-		JCheckBox chckbxDatatype = new JCheckBox("Datatype");
+		chckbxDatatype = new JCheckBox("Datatype");
 		chckbxDatatype.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
-				bindingsRender.showDataType(chckbxDatatype.isSelected());
-				bindingsDM.fireTableDataChanged();
-				for (BindingsTableModel table : subscriptionResultsDM.values()) {
-					table.fireTableDataChanged();
-				}
+				onDatatypeCheckbox(e);
 			}
 		});
 
@@ -2231,7 +2057,7 @@ public class Dashboard implements LoginListener {
 		gbc_chckbxDatatype.gridy = 0;
 		infoPanel.add(chckbxDatatype, gbc_chckbxDatatype);
 
-		JCheckBox chckbxQname = new JCheckBox("Qname");
+		chckbxQname = new JCheckBox("Qname");
 		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
 		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
 		gbc_chckbxQname.gridx = 6;
@@ -2239,11 +2065,7 @@ public class Dashboard implements LoginListener {
 		infoPanel.add(chckbxQname, gbc_chckbxQname);
 		chckbxQname.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
-				bindingsRender.showAsQName(chckbxQname.isSelected());
-				bindingsDM.fireTableDataChanged();
-				for (BindingsTableModel table : subscriptionResultsDM.values()) {
-					table.fireTableDataChanged();
-				}
+				onQnameCheckbox(e);
 			}
 		});
 		chckbxQname.setSelected(true);
@@ -2274,6 +2096,320 @@ public class Dashboard implements LoginListener {
 				// clear();
 			}
 		});
+	}
+
+	protected void onQnameCheckbox(ChangeEvent e) {
+		bindingsRender.showAsQName(chckbxQname.isSelected());
+		bindingsDM.fireTableDataChanged();
+		for (BindingsTableModel table : subscriptionResultsDM.values()) {
+			table.fireTableDataChanged();
+		}
+	}
+
+	protected void onDatatypeCheckbox(ChangeEvent e) {
+		bindingsRender.showDataType(chckbxDatatype.isSelected());
+		bindingsDM.fireTableDataChanged();
+		for (BindingsTableModel table : subscriptionResultsDM.values()) {
+			table.fireTableDataChanged();
+		}
+	}
+
+	protected void onExplorerSelectTreeElement(TreeSelectionEvent e) {
+		DefaultMutableTreeNode node = (DefaultMutableTreeNode) explorerTree.getLastSelectedPathComponent();
+		DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
+
+		if (node == null)
+			// Nothing is selected.
+			return;
+
+		if (node.isRoot())
+			return;
+
+		Bindings nodeInfo = (Bindings) node.getUserObject();
+
+		RDFTerm graph = new RDFTermURI((String)  graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
+		
+		if (nodeInfo.getValue("class") != null) {
+			node.removeAllChildren();
+			model.reload();
+
+			Bindings forced = new Bindings();
+			forced.addBinding("top", new RDFTermURI(nodeInfo.getValue("class")));
+			forced.addBinding("graph", graph);
+			
+			try {
+				Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
+
+				if (retResponse.isError()) {
+					logger.error(retResponse);
+				} else {
+					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+						if (valueBindings.isURI("instance"))
+							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
+					}
+				}
+
+				forced = new Bindings();
+				forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
+
+				retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
+				if (retResponse.isError()) {
+					logger.error(retResponse);
+				} else {
+					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+						if (valueBindings.isURI("instance"))
+							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
+					}
+				}
+
+			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+					| SEPABindingsException e1) {
+				logger.error(e1.getMessage());
+				if (logger.isTraceEnabled())
+					e1.printStackTrace();
+			}
+		} else if (nodeInfo.getValue("instance") != null) {
+			RDFTerm sub = new RDFTermURI(nodeInfo.getValue("instance"));
+
+			Bindings forced = new Bindings();
+			forced.addBinding("subject", sub);
+			forced.addBinding("graph", graph);
+
+			currentSubject.setText(sub.getValue());
+			navStack.clear();
+
+			Response retResponse;
+			try {
+				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+				if (retResponse.isError()) {
+					logger.error(retResponse);
+				} else {
+					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+					tableInstancePropertiesDataModel.clear();
+					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+						tableInstancePropertiesDataModel.addRow(valueBindings);
+					}
+				}
+			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+					| SEPABindingsException e1) {
+				logger.error(e1.getMessage());
+				if (logger.isTraceEnabled())
+					e1.printStackTrace();
+			}
+
+		}
+	}
+
+	protected void onExplorerBackButton(MouseEvent e) {
+		Bindings forced = new Bindings();
+		RDFTerm sub = navStack.get(navStack.size() - 1);
+		forced.addBinding("subject", sub);
+
+		Response retResponse;
+		try {
+			retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+			if (retResponse.isError()) {
+				logger.error(retResponse);
+			} else {
+				currentSubject.setText(sub.getValue());
+				navStack.remove(navStack.size() - 1);
+				if (navStack.isEmpty())
+					buttonStackBackward.setVisible(false);
+
+				QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+				tableInstancePropertiesDataModel.clear();
+				for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+					tableInstancePropertiesDataModel.addRow(valueBindings);
+				}
+			}
+		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
+			logger.error(e1.getMessage());
+			if (logger.isTraceEnabled())
+				e1.printStackTrace();
+		}
+	}
+
+	protected void onExplorerEditProperties(MouseEvent e) {
+		logger.debug(e);
+		if (e.getClickCount() == 2) {
+			if (!tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("URI")
+					&& !tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("BNODE"))
+				return;
+
+			Bindings forced = new Bindings();
+			RDFTerm sub = new RDFTermURI(
+					(String) tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 1));
+			forced.addBinding("subject", sub);
+
+			Response retResponse;
+			try {
+				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+				if (retResponse.isError()) {
+					logger.error(retResponse);
+				} else {
+					RDFTerm back = new RDFTermURI(currentSubject.getText());
+					navStack.add(back);
+					currentSubject.setText(sub.getValue());
+					buttonStackBackward.setVisible(true);
+
+					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+
+					tableInstancePropertiesDataModel.clear();
+					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+						tableInstancePropertiesDataModel.addRow(valueBindings);
+					}
+				}
+			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+					| SEPABindingsException e1) {
+				logger.error(e1.getMessage());
+				if (logger.isTraceEnabled())
+					e1.printStackTrace();
+			}
+		}
+	}
+
+	protected void onExloperSelectGraph() {
+		int row = graphsTable.getSelectedRow();
+		String graphUri = (String) graphs.getValueAt(graphsTable.convertRowIndexToModel(row), 0);
+
+		Bindings forced = new Bindings();
+		forced.addBinding("graph", new RDFTermURI(graphUri));
+
+		try {
+			Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
+
+			if (retResponse.isError()) {
+				logger.error(retResponse);
+			} else {
+				DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) model.getRoot();
+
+				node.removeAllChildren();
+				model.reload();
+
+				QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
+				for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
+					model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
+				}
+			}
+		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
+			logger.error(e1.getMessage());
+			if (logger.isTraceEnabled())
+				e1.printStackTrace();
+		}
+	}
+
+	protected void onExplorerOpenTab() {
+		try {
+			if (graphs.getRowCount() != 0)
+				return;
+
+			Response retResponse = sepaClient.query("GRAPHS", null, 5000);
+			if (retResponse.isError()) {
+				logger.error(retResponse);
+			} else {
+				QueryResponse response = (QueryResponse) retResponse;
+				for (Bindings bindings : response.getBindingsResults().getBindings()) {
+					graphs.addRow(bindings.getValue("graph"), Integer.parseInt(bindings.getValue("count")));
+				}
+			}
+		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
+			logger.error(e1.getMessage());
+			if (logger.isTraceEnabled())
+				e1.printStackTrace();
+		}
+	}
+
+	protected void onLoadJSAPButton() {
+		String openIn = null;
+		if (appProperties.getProperty("appProfile") != null) {
+			String[] profilePath = appProperties.getProperty("appProfile").split(",");
+			openIn = profilePath[profilePath.length - 1];
+		}
+
+		final JFileChooser fc = new JFileChooser(openIn);
+		DashboardFileFilter filter = new DashboardFileFilter("JSON SAP Profile (.jsap)", ".jsap");
+		fc.setFileFilter(filter);
+		int returnVal = fc.showOpenDialog(frmSepaDashboard);
+		if (returnVal == JFileChooser.APPROVE_OPTION) {
+			String fileName = fc.getSelectedFile().getPath();
+
+			if (jsapFiles.contains(fileName)) {
+				jsapFiles.remove(fileName);
+			}
+
+			try {
+				if (loadSAP(fileName, !chckbxMerge.isSelected())) {
+					FileOutputStream out = null;
+					try {
+						out = new FileOutputStream("dashboard.properties");
+					} catch (FileNotFoundException e3) {
+						logger.error(e3.getMessage());
+						return;
+					}
+
+					String path = "";
+					for (int i = 0; i < jsapFiles.size(); i++) {
+						if (i == 0)
+							path = jsapFiles.get(i);
+						else
+							path = path + "," + jsapFiles.get(i);
+					}
+
+					appProperties = new Properties();
+					appProperties.put("appProfile", path);
+					appProperties.put("jksName", jksName);
+					appProperties.put("jksPass", jksPass);
+
+					try {
+						appProperties.store(out, "Dashboard properties");
+					} catch (IOException e1) {
+						logger.error(e1.getMessage());
+					}
+					try {
+						out.close();
+					} catch (IOException e2) {
+						logger.error(e2.getMessage());
+					}
+
+				}
+			} catch (SEPAPropertiesException e1) {
+				logger.error(e1.getMessage());
+				if (logger.isTraceEnabled())
+					e1.printStackTrace();
+			}
+		}
+	}
+
+	protected void onSubscribeButton() {
+		try {
+			subscribe();
+		} catch (IOException | SEPAPropertiesException | NumberFormatException | SEPAProtocolException
+				| SEPASecurityException | SEPABindingsException | InterruptedException e1) {
+			logger.error(e1.getMessage());
+		}
+	}
+
+	protected void onQueryButton() {
+		try {
+			query();
+		} catch (SEPAPropertiesException | SEPABindingsException e1) {
+			logger.error(e1.getMessage());
+		}
+	}
+
+	protected void onUpdateButton() {
+		try {
+			update();
+		} catch (SEPAPropertiesException | SEPABindingsException e1) {
+			logger.error(e1.getMessage());
+		}
 	}
 
 	protected void clear() {
@@ -2443,7 +2579,7 @@ public class Dashboard implements LoginListener {
 		enableUpdateButton();
 	}
 
-	private void selectQueryID(String id) throws SEPABindingsException {
+	protected void selectQueryID(String id) throws SEPABindingsException {
 		if (id == null)
 			return;
 
@@ -2491,7 +2627,7 @@ public class Dashboard implements LoginListener {
 		enableQueryButton();
 	}
 
-	private boolean checkType(String value, String type) {
+	protected boolean checkType(String value, String type) {
 		if (type == null)
 			return true;
 
@@ -2551,7 +2687,7 @@ public class Dashboard implements LoginListener {
 		return true;
 	}
 
-	private void enableUpdateButton() {
+	protected void enableUpdateButton() {
 		updateButton.setEnabled(false);
 		if (updateSPARQL.getText().equals(""))
 			return;
@@ -2568,7 +2704,7 @@ public class Dashboard implements LoginListener {
 		updateButton.setEnabled(true);
 	}
 
-	private void enableQueryButton() {
+	protected void enableQueryButton() {
 		btnQuery.setEnabled(false);
 		subscribeButton.setEnabled(false);
 		if (querySPARQL.getText().equals(""))
