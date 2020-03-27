@@ -2270,6 +2270,10 @@ public class Dashboard implements LoginListener {
 		RDFTerm sub = navStack.get(navStack.size() - 1);
 		forced.addBinding("subject", sub);
 
+		RDFTerm graph = new RDFTermURI(
+				(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
+		forced.addBinding("graph", graph);
+		
 		Response retResponse;
 		try {
 			retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
@@ -2306,7 +2310,10 @@ public class Dashboard implements LoginListener {
 			RDFTerm sub = new RDFTermURI(
 					(String) tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 1));
 			forced.addBinding("subject", sub);
-
+			RDFTerm graph = new RDFTermURI(
+					(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
+			forced.addBinding("graph", graph);
+			
 			Response retResponse;
 			try {
 				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
@@ -2341,6 +2348,11 @@ public class Dashboard implements LoginListener {
 		Bindings forced = new Bindings();
 		forced.addBinding("graph", new RDFTermURI(graphUri));
 
+		tableInstancePropertiesDataModel.clear();
+		tableInstancePropertiesDataModel.fireTableDataChanged();
+		
+		currentSubject.setText("");
+		
 		try {
 			Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
 
