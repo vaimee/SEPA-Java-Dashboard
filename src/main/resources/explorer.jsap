@@ -66,10 +66,11 @@
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
-					"value" : "http://localhost:8890/DAV"
+					"value" : "http://www.w3.org/2002/07/owl#"
 				},
 				"top": {
-					"type": "uri"
+					"type": "uri",
+					"value" : "rdfs:Class"
 				}
 			}
 		},
