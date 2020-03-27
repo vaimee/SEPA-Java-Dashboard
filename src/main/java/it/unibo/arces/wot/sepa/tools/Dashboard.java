@@ -2146,14 +2146,15 @@ public class Dashboard implements LoginListener {
 					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
 
 					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-						if (valueBindings.isURI("instance"))
+						if (valueBindings.isURI("class"))
 							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
 					}
 				}
 
 				forced = new Bindings();
 				forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
-
+				forced.addBinding("graph", graph);
+				
 				retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2161,7 +2162,7 @@ public class Dashboard implements LoginListener {
 					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
 
 					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-						if (valueBindings.isURI("instance"))
+						if (valueBindings.isURI("instance") || valueBindings.isBNode("instance"))
 							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
 					}
 				}

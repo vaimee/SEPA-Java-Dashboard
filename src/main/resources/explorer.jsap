@@ -44,7 +44,7 @@
 	},
 	"queries": {
 		"CLASSES": {
-			"sparql": "SELECT DISTINCT ?class ?label WHERE {GRAPH ?graph {{?s rdf:type ?class} UNION {?class rdf:type owl:Class}  . OPTIONAL {?class rdfs:label ?label} }}",
+			"sparql": "SELECT DISTINCT ?class ?label FROM ?graph WHERE {{?s rdf:type ?class} UNION {?class rdf:type owl:Class} . OPTIONAL {?class rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
@@ -53,7 +53,7 @@
 			}
 		},
 		"TOP_CLASSES": {
-			"sparql": "SELECT DISTINCT ?class ?label WHERE {GRAPH ?graph {{?s rdf:type ?class} UNION {?class rdf:type owl:Class} . OPTIONAL {?class rdfs:label ?label} } FILTER NOT EXISTS{?class rdfs:subClassOf ?top} }",
+			"sparql": "SELECT DISTINCT ?class ?label FROM ?graph WHERE {{?s rdf:type ?class} UNION {?class rdf:type owl:Class} . OPTIONAL {?class rdfs:label ?label} FILTER NOT EXISTS{?class rdfs:subClassOf ?top} }",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
@@ -62,7 +62,7 @@
 			}
 		},
 		"SUB_CLASSES": {
-			"sparql": "SELECT DISTINCT ?class ?label WHERE {GRAPH ?graph {?class rdfs:subClassOf ?top . OPTIONAL {?class rdfs:label ?label}}}",
+			"sparql": "SELECT DISTINCT ?class ?label FROM ?graph WHERE {?class rdfs:subClassOf ?top . OPTIONAL {?class rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
@@ -74,7 +74,7 @@
 			}
 		},
 		"INDIVIDUALS": {
-			"sparql": "SELECT DISTINCT ?instance ?label WHERE {GRAPH ?graph {?instance rdf:type ?class . OPTIONAL {?instance rdfs:label ?label} }}",
+			"sparql": "SELECT DISTINCT ?instance ?label FROM ?graph WHERE {?instance rdf:type ?class . OPTIONAL {?instance rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
@@ -87,7 +87,7 @@
 			}
 		},
 		"URI_GRAPH": {
-			"sparql": "SELECT DISTINCT ?predicate ?label ?object WHERE {GRAPH ?graph {?subject ?predicate ?object . OPTIONAL {?predicate rdfs:label ?label}}}",
+			"sparql": "SELECT ?predicate ?label ?object FROM ?graph WHERE {?subject ?predicate ?object . OPTIONAL {?predicate rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",

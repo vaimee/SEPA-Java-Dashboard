@@ -1,15 +1,19 @@
 {
 	"updates": {
 		"ADD_PROVINCE": {
-			"sparql": "INSERT DATA {GRAPH <http://covid19/context> {?place rdf:type gn:Feature ; gn:contryCode ?code ; gn:featureClass 'ADM2' ; gn:parentFeature ?parent ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
+			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:contryCode ?code ; gn:featureClass 'ADM2' ; gn:parentFeature ?parent ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
 			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				},
 				"place": {
 					"type": "uri",
-					"value": "covid19:Place"
+					"value": "covid19:PlaceX"
 				},
 				"parent": {
 					"type": "uri",
-					"value": "covid19:Parent"
+					"value": "covid19:ParentY"
 				},
 				"name": {
 					"type": "literal",
@@ -32,8 +36,12 @@
 			}
 		},
 		"ADD_REGION": {
-			"sparql": "INSERT DATA {GRAPH <http://covid19/context> {?place rdf:type gn:Feature ; gn:contryCode ?code ; gn:featureClass 'ADM1' ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
+			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:contryCode ?code ; gn:featureClass 'ADM1' ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
 			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				},
 				"place": {
 					"type": "uri",
 					"value": "covid19:Place"
@@ -61,28 +69,66 @@
 	},
 	"queries": {
 		"REGIONS" : {
-			"sparql": "SELECT ?place ?name FROM <http://covid19/context> WHERE {?place rdf:type gn:Feature ; gn:featureClass 'ADM1' ; gn:name ?name}"
+			"sparql": "SELECT ?place ?name FROM ?context WHERE {?place rdf:type gn:Feature ; gn:featureClass 'ADM1' ; gn:name ?name}",
+			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				}
+			}
 		},
 		"PLACES_COUNT": {
-			"sparql": "SELECT (COUNT(?place) AS ?count) WHERE {GRAPH <http://covid19/context> {?place rdf:type gn:Feature}}"
+			"sparql": "SELECT (COUNT(?place) AS ?count) FROM ?context WHERE {?place rdf:type gn:Feature}",
+			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				}
+			}
 		},
 		"PLACES": {
-			"sparql": "SELECT * WHERE {GRAPH <http://covid19/context> {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . OPTIONAL {?place gn:parentFeature ?parent}}}"
+			"sparql": "SELECT * FROM ?context WHERE {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . OPTIONAL {?place gn:parentFeature ?parent}}",
+			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				}
+			}
 		},
 		"MAP_PLACES": {
-			"sparql": "SELECT * WHERE {GRAPH <http://covid19/context> {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . FILTER NOT EXISTS {?place gn:parentFeature ?parent}}}"
+			"sparql": "SELECT * FROM ?context WHERE {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . FILTER NOT EXISTS {?place gn:parentFeature ?parent}}",
+			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				}
+			}
 		},
 		"CONTAINED_PLACES": {
-			"sparql": "SELECT * WHERE {GRAPH <http://covid19/context> {?child gn:parentFeature ?root ; gn:name ?name}}",
+			"sparql": "SELECT * FROM ?context WHERE {?child gn:parentFeature ?root ; gn:name ?name}",
 			"forcedBindings": {
 				"root": {
 					"type": "uri",
 					"value": "covid19:Place"
+				},
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
 				}
 			}
 		},
 		"MAP_PLACES_TOTALCASES": {
-				"sparql": "SELECT * WHERE {GRAPH <http://covid19/context> {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . FILTER NOT EXISTS {?place gn:parentFeature ?parent}}GRAPH <http://covid19/observation>{ ?obs rdf:type sosa:Observation; sosa:observedProperty <http://covid19#TotalCases>; sosa:hasSimpleResult ?cases; sosa:hasFeatureOfInterest ?place.} }"
+				"sparql": "SELECT * FROM ?context FROM ?observation WHERE {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . FILTER NOT EXISTS {?place gn:parentFeature ?parent . ?obs rdf:type sosa:Observation; sosa:observedProperty <http://covid19#TotalCases>; sosa:hasSimpleResult ?cases; sosa:hasFeatureOfInterest ?place}",
+				"forcedBindings": {
+				"observation": {
+					"type": "uri",
+					"value": "http://covid19/observation"
+				},
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				}
+			}
 		}
 	},
 	"extended": {

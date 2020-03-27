@@ -1,7 +1,7 @@
 {
 	"updates": {
 		"ADD_SIMPLE_OBSERVATION": {
-			"sparql": "INSERT {GRAPH <http://covid19/observation> {_:obs rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property}} WHERE {}",
+			"sparql": "INSERT {GRAPH ?graph {_:obs rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property}} WHERE {}",
 			"forcedBindings": {
 				"place": {
 					"type": "uri",
@@ -19,12 +19,19 @@
 				"property": {
 					"type": "uri",
 					"value": "covid19:Recovered"
+				},
+				"graph": {
+					"type": "uri",
+					"value": "http://covid19/observation"
 				}
 			}
 		},
 		"ADD_OBSERVATION": {
-			"sparql": "INSERT {GRAPH <http://covid19/observation> {_:obs rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasResult _:res ; sosa:observedProperty ?property . _:res rdf:type qudt:QuantityValue ; qudt:unit ?unit ; qudt:numericValue ?value}} WHERE {}",
+			"sparql": "INSERT {GRAPH ?graph {_:obs rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasResult _:res ; sosa:observedProperty ?property . _:res rdf:type qudt:QuantityValue ; qudt:unit ?unit ; qudt:numericValue ?value}} WHERE {}",
 			"forcedBindings": {
+				"graph": {
+					"type": "uri"
+				},
 				"place": {
 					"type": "uri"
 				},
@@ -47,7 +54,7 @@
 			}
 		},
 		"ADD_OBSERVABLE_PROPERTY": {
-			"sparql": "INSERT DATA {GRAPH <http://covid19/observation> {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}}",
+			"sparql": "INSERT DATA {GRAPH ?graph {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}}",
 			"forcedBindings": {
 				"property": {
 					"type": "uri",
@@ -56,22 +63,62 @@
 				"label": {
 					"type": "literal",
 					"value": "Ospedalizzati con sintomi"
+				},
+				"graph": {
+					"type": "uri",
+					"value": "http://covid19/observation/context"
 				}
 			}
 		}
 	},
 	"queries": {
 		"OBSERVATIONS_COUNT": {
-			"sparql": "SELECT (COUNT(?observation) AS ?count) WHERE {GRAPH <http://covid19/observation> {?observation rdf:type sosa:Observation}}"
+			"sparql": "SELECT (COUNT(?observation) AS ?count) FROM ?graph WHERE {?observation rdf:type sosa:Observation}",
+			"forcedBindings": {
+				"graph": {
+					"type": "uri",
+					"value": "http://covid19/observation"
+				}
+			}
 		},
 		"SIMPLE_OBSERVATIONS": {
-				"sparql": "SELECT * WHERE {GRAPH <http://covid19/observation> {?observation rdf:type sosa:Observation ; sosa:resultTime ?timestamp; sosa:hasFeatureOfInterest ?place ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property}  GRAPH <http://covid19/observation/context> { ?property rdfs:label ?label}  GRAPH <http://covid19/context> {?place gn:name ?name ; gn:lat ?lat ; gn:long ?lon}}"
+				"sparql": "SELECT * FROM ?observation FROM ?context FROM ?property WHERE {?observation rdf:type sosa:Observation ; sosa:resultTime ?timestamp; sosa:hasFeatureOfInterest ?place ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property . ?property rdfs:label ?label . ?place gn:name ?name ; gn:lat ?lat ; gn:long ?lon}",
+				"forcedBindings": {
+				"observation": {
+					"type": "uri",
+					"value": "http://covid19/observation"
+				},
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				},
+				"property": {
+					"type": "uri",
+					"value": "http://covid19/observation/context"
+				}
+			}
 		},
 		"OBSERVATIONS": {
-			"sparql": "SELECT * FROM <http://covid19/observation> FROM <http://covid19/context> FROM <http://covid19/observation/context> WHERE {?observation rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasResult ?result ; sosa:observedProperty ?property . ?result rdf:type qudt:QuantityValue ; qudt:unit ?unit ; qudt:numericValue ?value . ?property rdfs:label ?label . ?place gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . OPTIONAL {?unit qudt:symbol ?symbol}}"
+			"sparql": "SELECT * FROM ?observation FROM ?context FROM ?property WHERE {?observation rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasResult ?result ; sosa:observedProperty ?property . ?result rdf:type qudt:QuantityValue ; qudt:unit ?unit ; qudt:numericValue ?value . ?property rdfs:label ?label . ?place gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . OPTIONAL {?unit qudt:symbol ?symbol}}",
+			"observation": {
+					"type": "uri",
+					"value": "http://covid19/observation"
+				},
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				},
+				"property": {
+					"type": "uri",
+					"value": "http://covid19/observation/context"
+				}
 		},
 		"OBSERVABLE_PROPERTIES": {
-			"sparql": "SELECT * WHERE {GRAPH <http://covid19/observation/context> {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}}"
+			"sparql": "SELECT * FROM ?property WHERE {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}",
+				"property": {
+					"type": "uri",
+					"value": "http://covid19/observation/context"
+				}
 		}
 	}
 }
