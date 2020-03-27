@@ -118,7 +118,7 @@
 			}
 		},
 		"MAP_PLACES_TOTALCASES": {
-				"sparql": "SELECT * FROM ?context FROM ?observation WHERE {?place rdf:type gn:Feature; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . FILTER NOT EXISTS {?place gn:parentFeature ?parent . ?obs rdf:type sosa:Observation; sosa:observedProperty <http://covid19#TotalCases>; sosa:hasSimpleResult ?cases; sosa:hasFeatureOfInterest ?place}",
+				"sparql": "SELECT * FROM ?context FROM ?observation WHERE {?place rdf:type gn:Feature ; gn:contryCode ?code ; gn:featureClass ?class ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . ?obs rdf:type sosa:Observation ; sosa:observedProperty <http://covid19#TotalCases>; sosa:hasResult ?res; sosa:hasFeatureOfInterest ?place . ?res qudt:numericValue ?cases . FILTER NOT EXISTS {?place gn:parentFeature ?parent}}",
 				"forcedBindings": {
 				"observation": {
 					"type": "uri",
