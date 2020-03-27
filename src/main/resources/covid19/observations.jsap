@@ -100,6 +100,7 @@
 		},
 		"OBSERVATIONS": {
 			"sparql": "SELECT * FROM ?observation FROM ?context FROM ?property WHERE {?observation rdf:type sosa:Observation ; sosa:hasFeatureOfInterest ?place ; sosa:resultTime ?timestamp ; sosa:hasResult ?result ; sosa:observedProperty ?property . ?result rdf:type qudt:QuantityValue ; qudt:unit ?unit ; qudt:numericValue ?value . ?property rdfs:label ?label . ?place gn:name ?name ;  gn:lat ?lat ; gn:long ?lon . OPTIONAL {?unit qudt:symbol ?symbol}}",
+			"forcedBindings": {
 			"observation": {
 					"type": "uri",
 					"value": "http://covid19/observation"
@@ -112,12 +113,15 @@
 					"type": "uri",
 					"value": "http://covid19/observation/context"
 				}
+				}
 		},
 		"OBSERVABLE_PROPERTIES": {
-			"sparql": "SELECT * FROM ?property WHERE {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}",
-				"property": {
+			"sparql": "SELECT * FROM ?graph WHERE {?property rdf:type sosa:ObservableProperty ; rdfs:label ?label}",
+				"forcedBindings": {
+				"graph": {
 					"type": "uri",
 					"value": "http://covid19/observation/context"
+				}
 				}
 		}
 	}
