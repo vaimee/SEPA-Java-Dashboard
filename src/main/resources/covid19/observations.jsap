@@ -82,17 +82,17 @@
 			}
 		},
 		"SIMPLE_OBSERVATIONS": {
-				"sparql": "SELECT * FROM ?observation FROM ?context FROM ?property WHERE {?observation rdf:type sosa:Observation ; sosa:resultTime ?timestamp; sosa:hasFeatureOfInterest ?place ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property . ?property rdfs:label ?label . ?place gn:name ?name ; gn:lat ?lat ; gn:long ?lon}",
+				"sparql": "SELECT * FROM ?obsGraph FROM ?ctxGraph FROM ?proGraph WHERE {?observation rdf:type sosa:Observation ; sosa:resultTime ?timestamp; sosa:hasFeatureOfInterest ?place ; sosa:hasSimpleResult ?value ; sosa:observedProperty ?property . ?property rdfs:label ?label . ?place gn:name ?name ; gn:lat ?lat ; gn:long ?lon}",
 				"forcedBindings": {
-				"observation": {
+				"obsGraph": {
 					"type": "uri",
 					"value": "http://covid19/observation"
 				},
-				"context": {
+				"ctxGraph": {
 					"type": "uri",
 					"value": "http://covid19/context"
 				},
-				"property": {
+				"proGraph": {
 					"type": "uri",
 					"value": "http://covid19/observation/context"
 				}
