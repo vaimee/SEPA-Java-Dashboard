@@ -101,7 +101,7 @@
 			}
 		},
 		"GRAPHS": {
-			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {GRAPH ?graph {?s ?p ?o}}"
+			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {GRAPH ?graph {?s ?p ?o}} GROUP BY ?graph"
 		}
 	}
 }

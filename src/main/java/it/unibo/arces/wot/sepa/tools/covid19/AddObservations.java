@@ -73,7 +73,9 @@ gn:featureClass 'ADM1'
 	"tamponi": 49288						covid19:TestPerformed 49288
 }
 
-ObservableProperty
+codiv19 ==> http://covid19#
+
+ObservableProperties URI
 	covid19:HospitalisedWithSymptoms
 	covid19:IntensiveCare 
 	covid19:TotalHospitalised 
@@ -115,25 +117,8 @@ public class AddObservations extends Producer {
 	public AddObservations() throws SEPAProtocolException, SEPASecurityException, SEPAPropertiesException, FileNotFoundException, IOException {
 		this(null,null);
 	}
-	
-	/*
-	
-	"data": "2020-03-20 17:00:00",			sosa:resultTime '2020-03-20T17:00:00Z'
-	"ricoverati_con_sintomi": 843,			covid19:HospitalisedWithSymptoms 843
-	"terapia_intensiva": 236,				covid19:IntensiveCare 236
-	"totale_ospedalizzati": 1079,			covid19:TotalHospitalised 1079
-	"isolamento_domiciliare": 2598,			covid19:HomeConfinement 2598	
-	"totale_attualmente_positivi": 3677,	covid19:TotalPositiveCases 3677
-	
-	"nuovi_attualmente_positivi": 508,		covid19:DailyPositiveCases 508
-	"dimessi_guariti": 223,					covid19:Recovered 223
-	"deceduti": 131,						covid19:Death 131
-	
-	"totale_casi": 4031,					covid19:TotalCases 4031
-	"tamponi": 49288						covid19:TestPerformed 49288
-	
-	 * */
-	public void addRegionObservations() throws FileNotFoundException, SEPABindingsException, SEPASecurityException, SEPAProtocolException, SEPAPropertiesException {
+
+	public void addRegionObservations(String graph) throws FileNotFoundException, SEPABindingsException, SEPASecurityException, SEPAProtocolException, SEPAPropertiesException {
 		JsonArray array = loadJsonArray("dpc-covid19-ita-regioni-latest.json");
 		
 		ArrayList<String> list = new ArrayList<String>();
@@ -149,6 +134,7 @@ public class AddObservations extends Producer {
 		list.add("tamponi");
 		
 		setUpdateBindingValue("unit", new RDFTermURI("unit:Number"));
+		setUpdateBindingValue("graph", new RDFTermURI(graph));
 		
 		for (JsonElement prov : array) {
 			setUpdateBindingValue("place", new RDFTermURI("http://covid19/Italy/Region/" +prov.getAsJsonObject().get("denominazione_regione").getAsString().replace(" ", "_").replace("'", "_")));
@@ -163,14 +149,11 @@ public class AddObservations extends Producer {
 		}
 	}
 	
-	/*
-	"data": "2020-03-20 17:00:00",			sosa:resultTime '2020-03-20T17:00:00Z'
-	"totale_casi": 80						covid19:TotalCases 80
-	 * */
-	public void addProvinceObservations() throws FileNotFoundException, SEPABindingsException, SEPASecurityException, SEPAProtocolException, SEPAPropertiesException {
+	public void addProvinceObservations(String graph) throws FileNotFoundException, SEPABindingsException, SEPASecurityException, SEPAProtocolException, SEPAPropertiesException {
 		JsonArray array = loadJsonArray("dpc-covid19-ita-province-latest.json");
 		
 		setUpdateBindingValue("unit", new RDFTermURI("unit:Number"));
+		setUpdateBindingValue("graph", new RDFTermURI(graph));
 		
 		for (JsonElement prov : array) {
 			setUpdateBindingValue("place", new RDFTermURI("http://covid19/Italy/Province/" + prov.getAsJsonObject().get("denominazione_provincia").getAsString().replace(" ", "_").replace("'", "_")));			
@@ -187,14 +170,5 @@ public class AddObservations extends Producer {
 		FileReader in = new FileReader(jsapFile);
 		
 		return new JsonParser().parse(in).getAsJsonArray();
-	}
-
-	public static void main(String[] args) throws FileNotFoundException, SEPAProtocolException, SEPASecurityException, SEPAPropertiesException, IOException, SEPABindingsException {
-		AddObservations agent = new AddObservations("host-mml.jsap");
-		
-		agent.addRegionObservations();
-		agent.addProvinceObservations();
-		
-		agent.close();
 	}
 }

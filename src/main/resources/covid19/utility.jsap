@@ -1,0 +1,12 @@
+{
+	"updates": {
+		"DROP_GRAPH": {
+			"sparql": "DROP SILENT GRAPH ?graph",
+			"forcedBindings": {
+				"graph": {
+					"type": "uri"
+				}
+			}
+		}
+	}
+}
