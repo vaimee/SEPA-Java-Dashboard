@@ -762,6 +762,12 @@ public class Dashboard implements LoginListener {
 			counterArrayList.add(count);
 			fireTableDataChanged();
 		}
+
+		public void clear() {
+			uriArrayList.clear();;
+			counterArrayList.clear();;
+			fireTableDataChanged();
+		}
 	}
 
 	private class InstanceTableModel extends AbstractTableModel {
@@ -1807,7 +1813,7 @@ public class Dashboard implements LoginListener {
 		explorerPanel.addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentShown(ComponentEvent e) {
-				onExplorerOpenTab();
+				onExplorerOpenTab(false);
 			}
 		});
 		mainTabs.addTab("Explorer", null, explorerPanel, null);
@@ -1902,9 +1908,9 @@ public class Dashboard implements LoginListener {
 		JPanel panel_1 = new JPanel();
 		splitPane.setRightComponent(panel_1);
 		GridBagLayout gbl_panel_1 = new GridBagLayout();
-		gbl_panel_1.columnWidths = new int[] { 0, 0, 0 };
+		gbl_panel_1.columnWidths = new int[] { 0, 0, 0, 0 };
 		gbl_panel_1.rowHeights = new int[] { 0, 0, 0, 0 };
-		gbl_panel_1.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panel_1.columnWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
 		gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
 		panel_1.setLayout(gbl_panel_1);
 
@@ -1915,6 +1921,19 @@ public class Dashboard implements LoginListener {
 		gbc_lblProperties.gridy = 0;
 		panel_1.add(lblProperties, gbc_lblProperties);
 		lblProperties.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		
+		JButton btnRefresh = new JButton("Refresh");
+		btnRefresh.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				onExplorerOpenTab(true);
+			}
+		});
+		GridBagConstraints gbc_btnRefresh = new GridBagConstraints();
+		gbc_btnRefresh.insets = new Insets(0, 0, 5, 0);
+		gbc_btnRefresh.gridx = 2;
+		gbc_btnRefresh.gridy = 0;
+		panel_1.add(btnRefresh, gbc_btnRefresh);
 
 		buttonStackBackward = new JButton("Back");
 		GridBagConstraints gbc_buttonStackBackward = new GridBagConstraints();
@@ -1926,6 +1945,7 @@ public class Dashboard implements LoginListener {
 
 		currentSubject = new JLabel("uri");
 		GridBagConstraints gbc_currentSubject = new GridBagConstraints();
+		gbc_currentSubject.gridwidth = 2;
 		gbc_currentSubject.insets = new Insets(0, 0, 5, 0);
 		gbc_currentSubject.gridx = 1;
 		gbc_currentSubject.gridy = 1;
@@ -1934,8 +1954,7 @@ public class Dashboard implements LoginListener {
 		JScrollPane scrollPane_8 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_8 = new GridBagConstraints();
 		gbc_scrollPane_8.fill = GridBagConstraints.BOTH;
-		gbc_scrollPane_8.gridwidth = 2;
-		gbc_scrollPane_8.insets = new Insets(0, 0, 0, 5);
+		gbc_scrollPane_8.gridwidth = 3;
 		gbc_scrollPane_8.gridx = 0;
 		gbc_scrollPane_8.gridy = 2;
 		panel_1.add(scrollPane_8, gbc_scrollPane_8);
@@ -2377,11 +2396,13 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
-	protected void onExplorerOpenTab() {
+	protected void onExplorerOpenTab(boolean refresh) {
 		try {
-			if (graphs.getRowCount() != 0)
+			if (!refresh && graphs.getRowCount() != 0)
 				return;
 
+			if (refresh) graphs.clear();
+			
 			Response retResponse = sepaClient.query("GRAPHS", null, 5000);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
