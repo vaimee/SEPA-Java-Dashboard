@@ -1,7 +1,7 @@
 {
 	"updates": {
 		"ADD_PROVINCE": {
-			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:countryCode ?code ; gn:featureClass 'ADM2' ; gn:parentFeature ?parent ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
+			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:countryCode ?code ; gn:featureClass gn:A ; gn:featureCode gn:A.ADM2 ; gn:parentFeature ?parent ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
 			"forcedBindings": {
 				"context": {
 					"type": "uri",
@@ -36,7 +36,7 @@
 			}
 		},
 		"ADD_REGION": {
-			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:countryCode ?code ; gn:featureClass 'ADM1' ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
+			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:countryCode ?code ; gn:featureClass gn:A ; gn:featureCode gn:A.ADM1 ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
 			"forcedBindings": {
 				"context": {
 					"type": "uri",
@@ -58,6 +58,37 @@
 				"lon": {
 					"type": "literal",
 					"value": "11.357023",
+					"datatype": "xsd:decimal"
+				},
+				"code": {
+					"type": "literal",
+					"value": "ITA"
+				}
+			}
+		},
+		"ADD_COUNTRY": {
+			"sparql": "INSERT DATA {GRAPH ?context {?place rdf:type gn:Feature ; gn:countryCode ?code ; gn:featureClass gn:A ; gn:name ?name ;  gn:lat ?lat ; gn:long ?lon }}",
+			"forcedBindings": {
+				"context": {
+					"type": "uri",
+					"value": "http://covid19/context"
+				},
+				"place": {
+					"type": "uri",
+					"value": "http://covid19/context/country/ITA"
+				},
+				"name": {
+					"type": "literal",
+					"value": "Italy"
+				},
+				"lat": {
+					"type": "literal",
+					"value": "42.391", 
+					"datatype": "xsd:decimal"
+				},
+				"lon": {
+					"type": "literal",
+					"value": "11.492",
 					"datatype": "xsd:decimal"
 				},
 				"code": {

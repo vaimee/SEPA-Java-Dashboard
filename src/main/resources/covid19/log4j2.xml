@@ -24,8 +24,8 @@ ALL					Integer.MAX_VALUE
 		 -->
 	</Appenders>
 	<Loggers>
-		<Root level="error">
-			<AppenderRef ref="Console" level="error"/>
+		<Root level="info">
+			<AppenderRef ref="Console" level="info"/>
 			<!--  <AppenderRef ref="Log" level="debug"/> -->
 		</Root>
 	</Loggers>
