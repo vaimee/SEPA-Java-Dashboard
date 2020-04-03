@@ -1168,12 +1168,7 @@ public class Dashboard implements LoginListener {
 
 			if (jsapFiles.size() > 1) {
 				for (int i = 1; i < jsaps.length; i++) {
-					try {
-						appProfile.read(jsapFiles.get(i), true);
-					} catch (IOException e) {
-						logger.error(e.getMessage());
-						return false;
-					}
+					appProfile.read(jsapFiles.get(i), true);
 				}
 			}
 		} else {
@@ -1186,7 +1181,7 @@ public class Dashboard implements LoginListener {
 					appProfile.read(file, true);
 					jsapFiles.add(file);
 				}
-			} catch (SEPAPropertiesException | SEPASecurityException | IOException e) {
+			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
