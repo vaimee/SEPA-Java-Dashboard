@@ -1,4 +1,4 @@
-package it.unibo.arces.wot.sepa.tools;
+package it.unibo.arces.wot.sepa.tools.dashboard;
 
 import java.awt.BorderLayout;
 

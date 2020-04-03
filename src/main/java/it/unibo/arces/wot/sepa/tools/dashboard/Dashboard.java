@@ -16,7 +16,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package it.unibo.arces.wot.sepa.tools;
+package it.unibo.arces.wot.sepa.tools.dashboard;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -1076,6 +1076,7 @@ public class Dashboard implements LoginListener {
 					window = new Dashboard();
 					window.frmSepaDashboard.setVisible(true);
 				} catch (Exception e) {
+					e.printStackTrace();
 					System.exit(-1);
 				}
 			}
@@ -1086,6 +1087,7 @@ public class Dashboard implements LoginListener {
 	 * Create the application.
 	 * 
 	 * @throws SEPAPropertiesException
+	 * @throws SEPASecurityException 
 	 * 
 	 * @throws BadPaddingException
 	 * @throws IllegalBlockSizeException
@@ -1096,13 +1098,13 @@ public class Dashboard implements LoginListener {
 	 * @throws NoSuchAlgorithmException
 	 * @throws IllegalArgumentException
 	 */
-	public Dashboard() throws SEPAPropertiesException {
+	public Dashboard() throws SEPAPropertiesException, SEPASecurityException {
 		initialize();
 
 		loadSAP(null, true);
 	}
 
-	protected boolean loadSAP(String file, boolean load) throws SEPAPropertiesException {
+	protected boolean loadSAP(String file, boolean load) throws SEPAPropertiesException, SEPASecurityException {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
@@ -2073,7 +2075,11 @@ public class Dashboard implements LoginListener {
 		infoPanel.add(btnLoadXmlProfile, gbc_btnLoadXmlProfile);
 		btnLoadXmlProfile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				onLoadJSAPButton();
+				try {
+					onLoadJSAPButton();
+				} catch (SEPASecurityException e1) {
+					logger.error(e1.getMessage());
+				}
 			}
 		});
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
@@ -2419,7 +2425,7 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
-	protected void onLoadJSAPButton() {
+	protected void onLoadJSAPButton() throws SEPASecurityException {
 		String openIn = null;
 		if (appProperties.getProperty("appProfile") != null) {
 			String[] profilePath = appProperties.getProperty("appProfile").split(",");
