@@ -34,6 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -115,6 +116,7 @@ import javax.swing.UIManager;
 import java.awt.Panel;
 
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
@@ -230,6 +232,8 @@ public class Dashboard implements LoginListener {
 	private JCheckBox chckbxDatatype;
 
 	private JCheckBox chckbxQname;
+
+	private JLabel graphsEndpointLabel;
 
 	class DashboardHandler implements ISubscriptionHandler {
 		protected String unsubSpuid;
@@ -764,8 +768,10 @@ public class Dashboard implements LoginListener {
 		}
 
 		public void clear() {
-			uriArrayList.clear();;
-			counterArrayList.clear();;
+			uriArrayList.clear();
+			;
+			counterArrayList.clear();
+			;
 			fireTableDataChanged();
 		}
 	}
@@ -1087,7 +1093,7 @@ public class Dashboard implements LoginListener {
 	 * Create the application.
 	 * 
 	 * @throws SEPAPropertiesException
-	 * @throws SEPASecurityException 
+	 * @throws SEPASecurityException
 	 * 
 	 * @throws BadPaddingException
 	 * @throws IllegalBlockSizeException
@@ -1131,6 +1137,8 @@ public class Dashboard implements LoginListener {
 		updateButton.setEnabled(false);
 		subscribeButton.setEnabled(false);
 
+		URL dashboardJsapUrl = Dashboard.class.getResource("/explorer.jsap");
+		
 		if (file == null) {
 			FileInputStream in = null;
 			try {
@@ -1161,6 +1169,7 @@ public class Dashboard implements LoginListener {
 
 			try {
 				appProfile = new JSAP(jsapFiles.get(0));
+//				appProfile = new JSAP(dashboardJsapUrl.getPath());
 			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
@@ -1174,7 +1183,10 @@ public class Dashboard implements LoginListener {
 		} else {
 			try {
 				if (load) {
+					//appProfile = new JSAP(dashboardJsapUrl.getPath());
 					appProfile = new JSAP(file);
+					appProfile.read(file, true);
+					
 					jsapFiles.clear();
 					jsapFiles.add(file);
 				} else if (appProfile != null) {
@@ -1185,24 +1197,6 @@ public class Dashboard implements LoginListener {
 				logger.error(e.getMessage());
 				return false;
 			}
-		}
-
-		// Loading namespaces
-		for (String prefix : appProfile.getNamespaces().keySet()) {
-			Vector<String> row = new Vector<String>();
-			row.add(prefix);
-			row.addElement(appProfile.getNamespaces().get(prefix));
-			namespacesDM.addRow(row);
-		}
-
-		// Loading updates
-		for (String update : appProfile.getUpdateIds()) {
-			updateListDM.add(update);
-		}
-
-		// Loading subscribes
-		for (String subscribe : appProfile.getQueryIds()) {
-			queryListDM.add(subscribe);
 		}
 
 		// Security
@@ -1240,6 +1234,27 @@ public class Dashboard implements LoginListener {
 				logger.error(e.getMessage());
 				return false;
 			}
+		}
+		
+		// Add explorer JSAP
+		appProfile.read(dashboardJsapUrl.getPath());
+
+		// Loading namespaces
+		for (String prefix : appProfile.getNamespaces().keySet()) {
+			Vector<String> row = new Vector<String>();
+			row.add(prefix);
+			row.addElement(appProfile.getNamespaces().get(prefix));
+			namespacesDM.addRow(row);
+		}
+
+		// Loading updates
+		for (String update : appProfile.getUpdateIds()) {
+			updateListDM.add(update);
+		}
+
+		// Loading subscribes
+		for (String subscribe : appProfile.getQueryIds()) {
+			queryListDM.add(subscribe);
 		}
 
 		return true;
@@ -1815,26 +1830,67 @@ public class Dashboard implements LoginListener {
 		});
 		mainTabs.addTab("Explorer", null, explorerPanel, null);
 		GridBagLayout gbl_explorerPanel = new GridBagLayout();
-		gbl_explorerPanel.columnWidths = new int[] { 0, 0 };
-		gbl_explorerPanel.rowHeights = new int[] { 0, 0, 0, 0 };
-		gbl_explorerPanel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_explorerPanel.rowWeights = new double[] { 0.0, 1.0, 1.0, Double.MIN_VALUE };
+		gbl_explorerPanel.columnWidths = new int[] { 0, 0, 0 };
+		gbl_explorerPanel.rowHeights = new int[] { 0, 0, 0, 0, 0 };
+		gbl_explorerPanel.columnWeights = new double[] { 1.0, 0.0, Double.MIN_VALUE };
+		gbl_explorerPanel.rowWeights = new double[] { 0.0, 0.0, 1.0, 1.0, Double.MIN_VALUE };
 		explorerPanel.setLayout(gbl_explorerPanel);
+		
+		graphsEndpointLabel = new JLabel("Endpoint");
+		GridBagConstraints gbc_graphsEndpointLabel = new GridBagConstraints();
+		gbc_graphsEndpointLabel.insets = new Insets(5, 0, 5, 5);
+		gbc_graphsEndpointLabel.gridx = 0;
+		gbc_graphsEndpointLabel.gridy = 0;
+		explorerPanel.add(graphsEndpointLabel, gbc_graphsEndpointLabel);
 
 		JLabel lblGraphs = new JLabel("Graphs");
 		lblGraphs.setFont(new Font("Lucida Grande", Font.BOLD, 13));
 		GridBagConstraints gbc_lblGraphs = new GridBagConstraints();
-		gbc_lblGraphs.insets = new Insets(0, 0, 5, 0);
+		gbc_lblGraphs.insets = new Insets(0, 0, 5, 5);
 		gbc_lblGraphs.gridx = 0;
-		gbc_lblGraphs.gridy = 0;
+		gbc_lblGraphs.gridy = 1;
 		explorerPanel.add(lblGraphs, gbc_lblGraphs);
+		
+		JButton btnNewButton_1 = new JButton("DROP");
+		btnNewButton_1.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				int[] rows = graphsTable.getSelectedRows();
+				if (rows.length > 0) {
+					int dialogResult = JOptionPane.showConfirmDialog (null, "Are you sure? "+rows.length+ " graphs will be deleted!","Warning",JOptionPane.YES_NO_OPTION);
+					if(dialogResult == JOptionPane.YES_OPTION){
+						for (int i : rows) {
+							Bindings forced = new Bindings();
+							forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(i, 0).toString()));
+							try {
+								sepaClient.update("DROP_GRAPH", forced, 5000);
+							} catch (SEPAProtocolException | SEPASecurityException | IOException
+									| SEPAPropertiesException | SEPABindingsException e1) {
+								logger.error(e1.getMessage());
+								if (logger.isTraceEnabled()) e1.printStackTrace();
+							}
+						}
+						
+						onExplorerOpenTab(true);
+					}
+				}
+			}
+		});
+		btnNewButton_1.setForeground(Color.RED);
+		btnNewButton_1.setBackground(Color.RED);
+		GridBagConstraints gbc_btnNewButton_1 = new GridBagConstraints();
+		gbc_btnNewButton_1.insets = new Insets(5, 0, 5, 0);
+		gbc_btnNewButton_1.gridx = 1;
+		gbc_btnNewButton_1.gridy = 1;
+		explorerPanel.add(btnNewButton_1, gbc_btnNewButton_1);
 
 		JScrollPane scrollPane_9 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_9 = new GridBagConstraints();
+		gbc_scrollPane_9.gridwidth = 2;
 		gbc_scrollPane_9.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane_9.insets = new Insets(0, 0, 5, 0);
 		gbc_scrollPane_9.gridx = 0;
-		gbc_scrollPane_9.gridy = 1;
+		gbc_scrollPane_9.gridy = 2;
 		explorerPanel.add(scrollPane_9, gbc_scrollPane_9);
 
 		graphsTable = new JTable(graphs);
@@ -1859,9 +1915,10 @@ public class Dashboard implements LoginListener {
 
 		JSplitPane splitPane = new JSplitPane();
 		GridBagConstraints gbc_splitPane = new GridBagConstraints();
+		gbc_splitPane.gridwidth = 2;
 		gbc_splitPane.fill = GridBagConstraints.BOTH;
 		gbc_splitPane.gridx = 0;
-		gbc_splitPane.gridy = 2;
+		gbc_splitPane.gridy = 3;
 		explorerPanel.add(splitPane, gbc_splitPane);
 
 		JPanel panel = new JPanel();
@@ -1918,7 +1975,7 @@ public class Dashboard implements LoginListener {
 		gbc_lblProperties.gridy = 0;
 		panel_1.add(lblProperties, gbc_lblProperties);
 		lblProperties.setFont(new Font("Lucida Grande", Font.BOLD, 13));
-		
+
 		JButton btnRefresh = new JButton("Refresh");
 		btnRefresh.addMouseListener(new MouseAdapter() {
 			@Override
@@ -1927,7 +1984,7 @@ public class Dashboard implements LoginListener {
 			}
 		});
 		GridBagConstraints gbc_btnRefresh = new GridBagConstraints();
-		gbc_btnRefresh.insets = new Insets(0, 0, 5, 0);
+		gbc_btnRefresh.insets = new Insets(5, 0, 5, 0);
 		gbc_btnRefresh.gridx = 2;
 		gbc_btnRefresh.gridy = 0;
 		panel_1.add(btnRefresh, gbc_btnRefresh);
@@ -1990,14 +2047,13 @@ public class Dashboard implements LoginListener {
 
 				try {
 					Response ret = null;
-	
+
 					if (type == null) {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);	
-					}
-					else if (type.equals("URI") || type.equals("BNODE")) {
+						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);
+					} else if (type.equals("URI") || type.equals("BNODE")) {
 						object = new RDFTermURI(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
 						forcedBindings.addBinding("object", object);
@@ -2008,7 +2064,7 @@ public class Dashboard implements LoginListener {
 						forcedBindings.addBinding("object", object);
 						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);
 					}
-					
+
 					if (ret.isError())
 						logger.error(ret);
 
@@ -2293,7 +2349,7 @@ public class Dashboard implements LoginListener {
 		RDFTerm graph = new RDFTermURI(
 				(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
 		forced.addBinding("graph", graph);
-		
+
 		Response retResponse;
 		try {
 			retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
@@ -2333,7 +2389,7 @@ public class Dashboard implements LoginListener {
 			RDFTerm graph = new RDFTermURI(
 					(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
 			forced.addBinding("graph", graph);
-			
+
 			Response retResponse;
 			try {
 				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
@@ -2370,9 +2426,9 @@ public class Dashboard implements LoginListener {
 
 		tableInstancePropertiesDataModel.clear();
 		tableInstancePropertiesDataModel.fireTableDataChanged();
-		
+
 		currentSubject.setText("");
-		
+
 		try {
 			Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
 
@@ -2399,11 +2455,14 @@ public class Dashboard implements LoginListener {
 
 	protected void onExplorerOpenTab(boolean refresh) {
 		try {
+			graphsEndpointLabel.setText(appProfile.getHost());
+			
 			if (!refresh && graphs.getRowCount() != 0)
 				return;
 
-			if (refresh) graphs.clear();
-			
+			if (refresh)
+				graphs.clear();
+
 			Response retResponse = sepaClient.query("GRAPHS", null, 5000);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2667,8 +2726,8 @@ public class Dashboard implements LoginListener {
 		else if (app.getUpdateMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
 			updateURL.setText("URL ENCODED POST " + url);
 
-		usingGraphURI.setText(app.getUsingGraphURI(id));
-		usingNamedGraphURI.setText(app.getUsingNamedGraphURI(id));
+		usingGraphURI.setText(app.getUsingGraphURI(id).toString());
+		usingNamedGraphURI.setText(app.getUsingNamedGraphURI(id).toString());
 
 		enableUpdateButton();
 	}
@@ -2715,8 +2774,8 @@ public class Dashboard implements LoginListener {
 		url += app.getSubscribePath(id);
 		subscribeURL.setText(url);
 
-		defaultGraphURI.setText(app.getDefaultGraphURI(id));
-		namedGraphURI.setText(app.getNamedGraphURI(id));
+		defaultGraphURI.setText(app.getDefaultGraphURI(id).toString());
+		namedGraphURI.setText(app.getNamedGraphURI(id).toString());
 
 		enableQueryButton();
 	}
