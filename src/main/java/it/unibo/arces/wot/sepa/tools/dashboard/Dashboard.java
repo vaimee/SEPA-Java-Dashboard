@@ -208,7 +208,6 @@ public class Dashboard implements LoginListener {
 	private JButton btnQuery;
 	private JLabel updateInfo;
 	private JLabel queryInfo;
-
 	private JCheckBox chckbxMerge;
 
 	private ClientSecurityManager sm;
@@ -216,7 +215,7 @@ public class Dashboard implements LoginListener {
 	private JTabbedPane subscriptionsPanel = new JTabbedPane(JTabbedPane.TOP);
 
 	private Login login = null;
-	private JButton btnLogout;
+	private JButton btnLogin;
 
 	private ArrayList<String> jsapFiles = new ArrayList<String>();
 
@@ -226,15 +225,13 @@ public class Dashboard implements LoginListener {
 
 	private JLabel currentSubject;
 	private JTable graphsTable;
-
 	private JButton buttonStackBackward;
-
 	private JCheckBox chckbxDatatype;
-
 	private JCheckBox chckbxQname;
-
 	private JLabel graphsEndpointLabel;
 
+	private boolean signedIn = false;
+	
 	class DashboardHandler implements ISubscriptionHandler {
 		protected String unsubSpuid;
 
@@ -332,6 +329,10 @@ public class Dashboard implements LoginListener {
 					try {
 //						subOp = SUB_OP.UNSUB;
 						unsubSpuid = spuid;
+						if (sepaClient == null) {
+					        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+					        return;
+						}
 						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()));
 					} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException
 							| SEPAProtocolException | InterruptedException e1) {
@@ -833,9 +834,17 @@ public class Dashboard implements LoginListener {
 
 				if (rows.get(row).getRDFTerm("object").isLiteral()) {
 					newBindings.addBinding("object", new RDFTermLiteral((String) value));
+					if (sepaClient == null) {
+				        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+				        return;
+					}
 					sepaClient.update("UPDATE_LITERAL", newBindings, 5000);
 				} else {
 					newBindings.addBinding("object", new RDFTermURI((String) value));
+					if (sepaClient == null) {
+				        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+				        return;
+					}
 					sepaClient.update("UPDATE_URI", newBindings, 5000);
 				}
 			} catch (SEPABindingsException | SEPAProtocolException | SEPASecurityException | IOException
@@ -1198,43 +1207,6 @@ public class Dashboard implements LoginListener {
 				return false;
 			}
 		}
-
-		// Security
-		if (appProfile.isSecure()) {
-			try {
-				oauth = new AuthenticationProperties(appProfile.getFileName());
-			} catch (SEPAPropertiesException | SEPASecurityException e1) {
-				logger.error(e1.getMessage());
-				return false;
-			}
-			try {
-				if (oauth.trustAll())
-					sm = new ClientSecurityManager(oauth);
-				else
-					sm = new ClientSecurityManager(oauth, jksName, jksPass);
-			} catch (SEPASecurityException e) {
-				logger.error(e.getMessage());
-				return false;
-			}
-
-			try {
-				sepaClient = new GenericClient(appProfile, sm, handler);
-			} catch (SEPAProtocolException e) {
-				logger.error(e.getMessage());
-				return false;
-			}
-
-			login = new Login(sm, this, frmSepaDashboard);
-			login.setVisible(true);
-		} else {
-
-			try {
-				sepaClient = new GenericClient(appProfile, null, handler);
-			} catch (SEPAProtocolException e) {
-				logger.error(e.getMessage());
-				return false;
-			}
-		}
 		
 		// Add explorer JSAP
 		appProfile.read(dashboardJsapUrl.getPath());
@@ -1255,6 +1227,27 @@ public class Dashboard implements LoginListener {
 		// Loading subscribes
 		for (String subscribe : appProfile.getQueryIds()) {
 			queryListDM.add(subscribe);
+		}
+		
+		// Security
+		if (appProfile.isSecure()) {
+			try {
+				oauth = new AuthenticationProperties(appProfile.getFileName());
+			} catch (SEPAPropertiesException | SEPASecurityException e1) {
+				logger.error(e1.getMessage());
+				return false;
+			}
+
+			login = new Login(oauth, this, frmSepaDashboard);
+			login.setVisible(true);
+		} else {
+
+			try {
+				sepaClient = new GenericClient(appProfile, null, handler);
+			} catch (SEPAProtocolException e) {
+				logger.error(e.getMessage());
+				return false;
+			}
 		}
 
 		return true;
@@ -1312,22 +1305,42 @@ public class Dashboard implements LoginListener {
 		propertiesDM.setColumnIdentifiers(propertiesHeader);
 
 		frmSepaDashboard = new JFrame();
-		frmSepaDashboard.setTitle(title);
+		frmSepaDashboard.setTitle("SEPA Dashboard Ver 0.9.10");
 		frmSepaDashboard.setBounds(100, 100, 925, 768);
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 925, 0 };
-		gridBagLayout.rowHeights = new int[] { 642, 129, 39, 0 };
+		gridBagLayout.rowHeights = new int[] { 0, 642, 129, 39, 0 };
 		gridBagLayout.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gridBagLayout.rowWeights = new double[] { 1.0, 0.0, 0.0, Double.MIN_VALUE };
+		gridBagLayout.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
 		frmSepaDashboard.getContentPane().setLayout(gridBagLayout);
+		
+				btnLogin = new JButton("Sign In");
+				GridBagConstraints gbc_btnLogin = new GridBagConstraints();
+				gbc_btnLogin.anchor = GridBagConstraints.EAST;
+				gbc_btnLogin.insets = new Insets(5, 0, 5, 5);
+				gbc_btnLogin.gridx = 0;
+				gbc_btnLogin.gridy = 0;
+				frmSepaDashboard.getContentPane().add(btnLogin, gbc_btnLogin);
+				btnLogin.addMouseListener(new MouseAdapter() {
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						if (!signedIn) login.setVisible(true);
+						else {
+							btnLogin.setText("Sign in");
+							signedIn = false;
+							sepaClient = null;
+						}
+					}
+				});
+				//btnLogin.setEnabled(false);
 
 		mainTabs = new JTabbedPane(JTabbedPane.TOP);
 		GridBagConstraints gbc_mainTabs = new GridBagConstraints();
 		gbc_mainTabs.insets = new Insets(0, 0, 5, 0);
 		gbc_mainTabs.fill = GridBagConstraints.BOTH;
 		gbc_mainTabs.gridx = 0;
-		gbc_mainTabs.gridy = 0;
+		gbc_mainTabs.gridy = 1;
 		frmSepaDashboard.getContentPane().add(mainTabs, gbc_mainTabs);
 
 		sparqlTab = new Panel();
@@ -1863,6 +1876,10 @@ public class Dashboard implements LoginListener {
 							Bindings forced = new Bindings();
 							forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(i, 0).toString()));
 							try {
+								if (sepaClient == null) {
+							        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+							        return;
+								}
 								sepaClient.update("DROP_GRAPH", forced, 5000);
 							} catch (SEPAProtocolException | SEPASecurityException | IOException
 									| SEPAPropertiesException | SEPABindingsException e1) {
@@ -2048,6 +2065,11 @@ public class Dashboard implements LoginListener {
 				try {
 					Response ret = null;
 
+					if (sepaClient == null) {
+				        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+				        return;
+					}
+					
 					if (type == null) {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
@@ -2092,7 +2114,7 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_5.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane_5.insets = new Insets(5, 10, 5, 10);
 		gbc_scrollPane_5.gridx = 0;
-		gbc_scrollPane_5.gridy = 1;
+		gbc_scrollPane_5.gridy = 2;
 		frmSepaDashboard.getContentPane().add(scrollPane_5, gbc_scrollPane_5);
 
 		textArea = new JTextArea();
@@ -2106,7 +2128,7 @@ public class Dashboard implements LoginListener {
 		gbc_infoPanel.anchor = GridBagConstraints.SOUTH;
 		gbc_infoPanel.fill = GridBagConstraints.HORIZONTAL;
 		gbc_infoPanel.gridx = 0;
-		gbc_infoPanel.gridy = 2;
+		gbc_infoPanel.gridy = 3;
 		frmSepaDashboard.getContentPane().add(infoPanel, gbc_infoPanel);
 		GridBagLayout gbl_infoPanel = new GridBagLayout();
 		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 0, 97, 76, 0 };
@@ -2135,14 +2157,6 @@ public class Dashboard implements LoginListener {
 		});
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
 
-		btnLogout = new JButton("Logout");
-		btnLogout.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				login.setVisible(true);
-			}
-		});
-
 		chckbxMerge = new JCheckBox("merge");
 		chckbxMerge.setSelected(true);
 		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
@@ -2151,13 +2165,6 @@ public class Dashboard implements LoginListener {
 		gbc_chckbxMerge.gridx = 1;
 		gbc_chckbxMerge.gridy = 0;
 		infoPanel.add(chckbxMerge, gbc_chckbxMerge);
-		btnLogout.setEnabled(false);
-		GridBagConstraints gbc_btnLogout = new GridBagConstraints();
-		gbc_btnLogout.anchor = GridBagConstraints.WEST;
-		gbc_btnLogout.insets = new Insets(0, 0, 0, 5);
-		gbc_btnLogout.gridx = 2;
-		gbc_btnLogout.gridy = 0;
-		infoPanel.add(btnLogout, gbc_btnLogout);
 
 		chckbxDatatype = new JCheckBox("Datatype");
 		chckbxDatatype.addChangeListener(new ChangeListener() {
@@ -2273,6 +2280,11 @@ public class Dashboard implements LoginListener {
 			forced.addBinding("graph", graph);
 
 			try {
+				if (sepaClient == null) {
+			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+			        return;
+				}
+				
 				Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
 
 				if (retResponse.isError()) {
@@ -2290,6 +2302,11 @@ public class Dashboard implements LoginListener {
 				forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
 				forced.addBinding("graph", graph);
 
+				if (sepaClient == null) {
+			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+			        return;
+				}
+				
 				retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2320,6 +2337,11 @@ public class Dashboard implements LoginListener {
 
 			Response retResponse;
 			try {
+				if (sepaClient == null) {
+			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+			        return;
+				}
+				
 				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2352,6 +2374,11 @@ public class Dashboard implements LoginListener {
 
 		Response retResponse;
 		try {
+			if (sepaClient == null) {
+		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+		        return;
+			}
+			
 			retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2392,6 +2419,11 @@ public class Dashboard implements LoginListener {
 
 			Response retResponse;
 			try {
+				if (sepaClient == null) {
+			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+			        return;
+				}
+				
 				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2430,6 +2462,11 @@ public class Dashboard implements LoginListener {
 		currentSubject.setText("");
 
 		try {
+			if (sepaClient == null) {
+		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+		        return;
+			}
+			
 			Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
 
 			if (retResponse.isError()) {
@@ -2454,6 +2491,12 @@ public class Dashboard implements LoginListener {
 	}
 
 	protected void onExplorerOpenTab(boolean refresh) {
+		if (sepaClient == null) {
+	        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+	        graphs.clear();
+	        return;
+		}
+		
 		try {
 			graphsEndpointLabel.setText(appProfile.getHost());
 			
@@ -2462,7 +2505,7 @@ public class Dashboard implements LoginListener {
 
 			if (refresh)
 				graphs.clear();
-
+			
 			Response retResponse = sepaClient.query("GRAPHS", null, 5000);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2599,6 +2642,11 @@ public class Dashboard implements LoginListener {
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
 		}
 
+		if (sepaClient == null) {
+	        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+	        return;
+		}
+		
 		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, Integer.parseInt(timeout.getText()));
 	}
 
@@ -2623,6 +2671,12 @@ public class Dashboard implements LoginListener {
 
 		try {
 			Instant start = Instant.now();
+			
+			if (sepaClient == null) {
+		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+		        return;
+			}
+			
 			Response ret = sepaClient.query(queryID, querySPARQL.getText(), bindings,
 					Integer.parseInt(timeout.getText()));
 			Instant stop = Instant.now();
@@ -2674,6 +2728,12 @@ public class Dashboard implements LoginListener {
 
 		try {
 			Instant start = Instant.now();
+			
+			if (sepaClient == null) {
+		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+		        return;
+			}
+			
 			Response ret = sepaClient.update(updateID, updateSPARQL.getText(), bindings,
 					Integer.parseInt(timeout.getText()));
 			Instant stop = Instant.now();
@@ -2700,10 +2760,10 @@ public class Dashboard implements LoginListener {
 		if (id == null)
 			return;
 		updateID = id;
-		JSAP app = sepaClient.getApplicationProfile();
-		updateSPARQL.setText(app.getSPARQLUpdate(id));
+		//JSAP app = sepaClient.getApplicationProfile();
+		updateSPARQL.setText(appProfile.getSPARQLUpdate(id));
 
-		Bindings bindings = app.getUpdateBindings(id);
+		Bindings bindings = appProfile.getUpdateBindings(id);
 		updateForcedBindingsDM.clearBindings();
 		for (String variable : bindings.getVariables()) {
 			if (bindings.isURI(variable))
@@ -2716,18 +2776,18 @@ public class Dashboard implements LoginListener {
 		}
 
 		String port = "";
-		if (app.getUpdatePort(id) != -1)
-			port = ":" + app.getUpdatePort(id);
-		String url = app.getUpdateProtocolScheme(id) + "://" + app.getUpdateHost(id) + port + app.getUpdatePath(id);
-		if (app.getUpdateMethod(id).equals(HTTPMethod.GET))
+		if (appProfile.getUpdatePort(id) != -1)
+			port = ":" + appProfile.getUpdatePort(id);
+		String url = appProfile.getUpdateProtocolScheme(id) + "://" + appProfile.getUpdateHost(id) + port + appProfile.getUpdatePath(id);
+		if (appProfile.getUpdateMethod(id).equals(HTTPMethod.GET))
 			updateURL.setText("GET " + url);
-		else if (app.getUpdateMethod(id).equals(HTTPMethod.POST))
+		else if (appProfile.getUpdateMethod(id).equals(HTTPMethod.POST))
 			updateURL.setText("POST " + url);
-		else if (app.getUpdateMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
+		else if (appProfile.getUpdateMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
 			updateURL.setText("URL ENCODED POST " + url);
 
-		usingGraphURI.setText(app.getUsingGraphURI(id).toString());
-		usingNamedGraphURI.setText(app.getUsingNamedGraphURI(id).toString());
+		usingGraphURI.setText(appProfile.getUsingGraphURI(id).toString());
+		usingNamedGraphURI.setText(appProfile.getUsingNamedGraphURI(id).toString());
 
 		enableUpdateButton();
 	}
@@ -2737,10 +2797,10 @@ public class Dashboard implements LoginListener {
 			return;
 
 		queryID = id;
-		JSAP app = sepaClient.getApplicationProfile();
-		querySPARQL.setText(app.getSPARQLQuery(id));
+		//JSAP app = sepaClient.getApplicationProfile();
+		querySPARQL.setText(appProfile.getSPARQLQuery(id));
 
-		Bindings bindings = app.getQueryBindings(id);
+		Bindings bindings = appProfile.getQueryBindings(id);
 		subscribeForcedBindingsDM.clearBindings();
 		for (String variable : bindings.getVariables()) {
 			if (bindings.isURI(variable))
@@ -2753,29 +2813,29 @@ public class Dashboard implements LoginListener {
 		}
 
 		String port = "";
-		if (app.getQueryPort(id) != -1)
-			port = ":" + app.getQueryPort(id);
-		String url = app.getQueryProtocolScheme(id) + "://" + app.getQueryHost(id) + port + app.getQueryPath(id);
+		if (appProfile.getQueryPort(id) != -1)
+			port = ":" + appProfile.getQueryPort(id);
+		String url = appProfile.getQueryProtocolScheme(id) + "://" + appProfile.getQueryHost(id) + port + appProfile.getQueryPath(id);
 
-		if (app.getQueryMethod(id).equals(HTTPMethod.GET))
+		if (appProfile.getQueryMethod(id).equals(HTTPMethod.GET))
 			queryURL.setText("GET " + url);
-		else if (app.getQueryMethod(id).equals(HTTPMethod.POST))
+		else if (appProfile.getQueryMethod(id).equals(HTTPMethod.POST))
 			queryURL.setText("POST " + url);
-		else if (app.getQueryMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
+		else if (appProfile.getQueryMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
 			queryURL.setText("URL ENCODED POST " + url);
 
-		if (app.getSubscribeProtocol(id).equals(SubscriptionProtocol.WS))
+		if (appProfile.getSubscribeProtocol(id).equals(SubscriptionProtocol.WS))
 			url = "ws://";
-		else if (app.getSubscribeProtocol(id).equals(SubscriptionProtocol.WSS))
+		else if (appProfile.getSubscribeProtocol(id).equals(SubscriptionProtocol.WSS))
 			url = "wss://";
-		url += app.getSubscribeHost(id);
-		if (app.getSubscribePort(id) != -1)
-			url += ":" + app.getSubscribePort(id);
-		url += app.getSubscribePath(id);
+		url += appProfile.getSubscribeHost(id);
+		if (appProfile.getSubscribePort(id) != -1)
+			url += ":" + appProfile.getSubscribePort(id);
+		url += appProfile.getSubscribePath(id);
 		subscribeURL.setText(url);
 
-		defaultGraphURI.setText(app.getDefaultGraphURI(id).toString());
-		namedGraphURI.setText(app.getNamedGraphURI(id).toString());
+		defaultGraphURI.setText(appProfile.getDefaultGraphURI(id).toString());
+		namedGraphURI.setText(appProfile.getNamedGraphURI(id).toString());
 
 		enableQueryButton();
 	}
@@ -2880,10 +2940,18 @@ public class Dashboard implements LoginListener {
 	// LOGIN
 
 	@Override
-	public void onLogin(String id) {
-		login.setVisible(false);
-		btnLogout.setEnabled(true);
-		frmSepaDashboard.setTitle(title + " Login: " + id);
+	public void onLogin(String id,ClientSecurityManager sec) {
+		try {
+			sm = sec;
+			sepaClient = new GenericClient(appProfile, sm, handler);
+			
+			login.setVisible(false);
+			btnLogin.setEnabled(true);
+			btnLogin.setText("Sign out "+id);
+			signedIn = true;
+		} catch (SEPAProtocolException e) {
+			logger.error(e.getMessage());
+		}
 	}
 
 	@Override
@@ -2893,7 +2961,8 @@ public class Dashboard implements LoginListener {
 
 	@Override
 	public void onLoginClose() {
-		System.exit(0);
+		//System.exit(0);
+		frmSepaDashboard.setTitle(title);
 	}
 
 	@Override
