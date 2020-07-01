@@ -7,8 +7,42 @@
 		"owl": "http://www.w3.org/2002/07/owl#"
 	},
 	"updates": {
+		"INSERT_DATA_URI": {
+			"sparql": "INSERT DATA {GRAPH ?graph {?subject ?predicate ?object}}",
+			"forcedBindings": {
+				"graph": {
+					"type": "uri"
+				},
+				"subject": {
+					"type": "uri"
+				},
+				"object": {
+					"type": "uri"
+				},
+				"predicate": {
+					"type": "uri"
+				}
+			}
+		},
+		"INSERT_DATA_LITERAL": {
+			"sparql": "INSERT DATA {GRAPH ?graph {?subject ?predicate ?object}}",
+			"forcedBindings": {
+				"graph": {
+					"type": "uri"
+				},
+				"subject": {
+					"type": "uri"
+				},
+				"object": {
+					"type": "literal"
+				},
+				"predicate": {
+					"type": "uri"
+				}
+			}
+		},
 		"UPDATE_LITERAL": {
-			"sparql": "WITH GRAPH ?graph DELETE {?subject ?predicate ?old} INSERT {?subject ?predicate ?object} WHERE {?subject ?predicate ?old}",
+			"sparql": "WITH ?graph DELETE {?subject ?predicate ?old} INSERT {?subject ?predicate ?object} WHERE {?subject ?predicate ?old}",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri"
@@ -25,7 +59,7 @@
 			}
 		},
 		"UPDATE_URI": {
-			"sparql": "WITH GRAPH ?graph DELETE {?subject ?predicate ?old} INSERT {?subject ?predicate ?object} WHERE {?subject ?predicate ?old}",
+			"sparql": "WITH ?graph DELETE {?subject ?predicate ?old} INSERT {?subject ?predicate ?object} WHERE {?subject ?predicate ?old}",
 			"forcedBindings": {
 				"graph": {
 					"type": "uri"

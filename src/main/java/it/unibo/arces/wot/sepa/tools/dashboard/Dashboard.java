@@ -103,7 +103,6 @@ import it.unibo.arces.wot.sepa.commons.sparql.RDFTermBNode;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermLiteral;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermURI;
 
-import javax.swing.border.TitledBorder;
 import java.awt.event.KeyEvent;
 
 import javax.swing.JCheckBox;
@@ -139,7 +138,7 @@ import javax.swing.event.TreeSelectionEvent;
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
 
-	static final String title = "SEPA Dashboard Ver 0.9.9";
+	static final String title = "SEPA Dashboard Ver 0.9.11";
 
 	static Dashboard window;
 
@@ -231,7 +230,7 @@ public class Dashboard implements LoginListener {
 	private JLabel graphsEndpointLabel;
 
 	private boolean signedIn = false;
-	
+
 	class DashboardHandler implements ISubscriptionHandler {
 		protected String unsubSpuid;
 
@@ -330,10 +329,24 @@ public class Dashboard implements LoginListener {
 //						subOp = SUB_OP.UNSUB;
 						unsubSpuid = spuid;
 						if (sepaClient == null) {
-					        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-					        return;
+							JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+									JOptionPane.INFORMATION_MESSAGE);
+							return;
 						}
 						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()));
+						new Thread() {
+							public void run() {
+								try {
+									Thread.sleep(2000);
+								} catch (InterruptedException e) {
+									return;
+								}
+								if (subscriptions.containsKey(spuid)) {
+									logger.warn("Force unsubscribe");
+									onUnsubscribe(spuid);
+								}
+							}
+						}.start();
 					} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException
 							| SEPAProtocolException | InterruptedException e1) {
 						logger.error(e1.getMessage());
@@ -375,13 +388,13 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public void onUnsubscribe(String spuid) {
-//			subOp = SUB_OP.NONE;
-
-			subscriptionsPanel.remove(subscriptions.get(spuid));
-			subscriptions.remove(spuid);
-			subscriptionResultsDM.remove(spuid);
-			subscriptionResultsLabels.remove(spuid);
-			subscriptionResultsTables.remove(spuid);
+			if (subscriptions.containsKey(spuid)) {
+				subscriptionsPanel.remove(subscriptions.get(spuid));
+				subscriptions.remove(spuid);
+				subscriptionResultsDM.remove(spuid);
+				subscriptionResultsLabels.remove(spuid);
+				subscriptionResultsTables.remove(spuid);
+			}
 		}
 	}
 
@@ -835,15 +848,17 @@ public class Dashboard implements LoginListener {
 				if (rows.get(row).getRDFTerm("object").isLiteral()) {
 					newBindings.addBinding("object", new RDFTermLiteral((String) value));
 					if (sepaClient == null) {
-				        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-				        return;
+						JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+								JOptionPane.INFORMATION_MESSAGE);
+						return;
 					}
 					sepaClient.update("UPDATE_LITERAL", newBindings, 5000);
 				} else {
 					newBindings.addBinding("object", new RDFTermURI((String) value));
 					if (sepaClient == null) {
-				        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-				        return;
+						JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+								JOptionPane.INFORMATION_MESSAGE);
+						return;
 					}
 					sepaClient.update("UPDATE_URI", newBindings, 5000);
 				}
@@ -1147,7 +1162,7 @@ public class Dashboard implements LoginListener {
 		subscribeButton.setEnabled(false);
 
 		URL dashboardJsapUrl = Dashboard.class.getResource("/explorer.jsap");
-		
+
 		if (file == null) {
 			FileInputStream in = null;
 			try {
@@ -1192,10 +1207,10 @@ public class Dashboard implements LoginListener {
 		} else {
 			try {
 				if (load) {
-					//appProfile = new JSAP(dashboardJsapUrl.getPath());
+					// appProfile = new JSAP(dashboardJsapUrl.getPath());
 					appProfile = new JSAP(file);
 					appProfile.read(file, true);
-					
+
 					jsapFiles.clear();
 					jsapFiles.add(file);
 				} else if (appProfile != null) {
@@ -1207,7 +1222,7 @@ public class Dashboard implements LoginListener {
 				return false;
 			}
 		}
-		
+
 		// Add explorer JSAP
 		appProfile.read(dashboardJsapUrl.getPath());
 
@@ -1228,7 +1243,7 @@ public class Dashboard implements LoginListener {
 		for (String subscribe : appProfile.getQueryIds()) {
 			queryListDM.add(subscribe);
 		}
-		
+
 		// Security
 		if (appProfile.isSecure()) {
 			try {
@@ -1305,7 +1320,8 @@ public class Dashboard implements LoginListener {
 		propertiesDM.setColumnIdentifiers(propertiesHeader);
 
 		frmSepaDashboard = new JFrame();
-		frmSepaDashboard.setTitle("SEPA Dashboard Ver 0.9.10");
+		frmSepaDashboard.setFont(new Font("Montserrat", Font.BOLD, 10));
+		frmSepaDashboard.setTitle(title);
 		frmSepaDashboard.setBounds(100, 100, 925, 768);
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
@@ -1314,28 +1330,31 @@ public class Dashboard implements LoginListener {
 		gridBagLayout.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gridBagLayout.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
 		frmSepaDashboard.getContentPane().setLayout(gridBagLayout);
-		
-				btnLogin = new JButton("Sign In");
-				GridBagConstraints gbc_btnLogin = new GridBagConstraints();
-				gbc_btnLogin.anchor = GridBagConstraints.EAST;
-				gbc_btnLogin.insets = new Insets(5, 0, 5, 5);
-				gbc_btnLogin.gridx = 0;
-				gbc_btnLogin.gridy = 0;
-				frmSepaDashboard.getContentPane().add(btnLogin, gbc_btnLogin);
-				btnLogin.addMouseListener(new MouseAdapter() {
-					@Override
-					public void mouseClicked(MouseEvent e) {
-						if (!signedIn) login.setVisible(true);
-						else {
-							btnLogin.setText("Sign in");
-							signedIn = false;
-							sepaClient = null;
-						}
-					}
-				});
-				//btnLogin.setEnabled(false);
+
+		btnLogin = new JButton("Sign In");
+		btnLogin.setFont(new Font("Montserrat", Font.BOLD, 13));
+		GridBagConstraints gbc_btnLogin = new GridBagConstraints();
+		gbc_btnLogin.anchor = GridBagConstraints.EAST;
+		gbc_btnLogin.insets = new Insets(2, 0, 0, 2);
+		gbc_btnLogin.gridx = 0;
+		gbc_btnLogin.gridy = 0;
+		frmSepaDashboard.getContentPane().add(btnLogin, gbc_btnLogin);
+		btnLogin.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (!signedIn)
+					login.setVisible(true);
+				else {
+					btnLogin.setText("Sign in");
+					signedIn = false;
+					sepaClient = null;
+				}
+			}
+		});
+		// btnLogin.setEnabled(false);
 
 		mainTabs = new JTabbedPane(JTabbedPane.TOP);
+		mainTabs.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		GridBagConstraints gbc_mainTabs = new GridBagConstraints();
 		gbc_mainTabs.insets = new Insets(0, 0, 5, 0);
 		gbc_mainTabs.fill = GridBagConstraints.BOTH;
@@ -1371,7 +1390,7 @@ public class Dashboard implements LoginListener {
 
 		updateURL = new JLabel("-");
 		updateURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		updateURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		updateURL.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_updateURL = new GridBagConstraints();
 		gbc_updateURL.gridwidth = 2;
 		gbc_updateURL.insets = new Insets(0, 0, 5, 0);
@@ -1380,7 +1399,7 @@ public class Dashboard implements LoginListener {
 		updateGraphs.add(updateURL, gbc_updateURL);
 
 		JLabel label_2 = new JLabel("using-graph-uri:");
-		label_2.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		label_2.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_2.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		GridBagConstraints gbc_label_2 = new GridBagConstraints();
 		gbc_label_2.anchor = GridBagConstraints.EAST;
@@ -1391,7 +1410,7 @@ public class Dashboard implements LoginListener {
 
 		usingGraphURI = new JLabel("-");
 		usingGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		usingGraphURI.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		usingGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_updateUsingGraphURI = new GridBagConstraints();
 		gbc_updateUsingGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_updateUsingGraphURI.insets = new Insets(0, 0, 5, 0);
@@ -1400,7 +1419,7 @@ public class Dashboard implements LoginListener {
 		updateGraphs.add(usingGraphURI, gbc_updateUsingGraphURI);
 
 		JLabel label_4 = new JLabel("using-named-graph-uri:");
-		label_4.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		label_4.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_4.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		GridBagConstraints gbc_label_4 = new GridBagConstraints();
 		gbc_label_4.anchor = GridBagConstraints.EAST;
@@ -1411,7 +1430,7 @@ public class Dashboard implements LoginListener {
 
 		usingNamedGraphURI = new JLabel("-");
 		usingNamedGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		usingNamedGraphURI.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		usingNamedGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_updateUsingNamedGraphURI = new GridBagConstraints();
 		gbc_updateUsingNamedGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_updateUsingNamedGraphURI.gridx = 1;
@@ -1436,7 +1455,7 @@ public class Dashboard implements LoginListener {
 
 		queryURL = new JLabel("-");
 		queryURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		queryURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		queryURL.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_queryURL = new GridBagConstraints();
 		gbc_queryURL.insets = new Insets(0, 0, 5, 5);
 		gbc_queryURL.gridx = 0;
@@ -1445,7 +1464,7 @@ public class Dashboard implements LoginListener {
 
 		subscribeURL = new JLabel("-");
 		subscribeURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		subscribeURL.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		subscribeURL.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
 		gbc_subscribeURL.insets = new Insets(0, 0, 5, 0);
 		gbc_subscribeURL.gridx = 1;
@@ -1453,7 +1472,7 @@ public class Dashboard implements LoginListener {
 		queryGraphs.add(subscribeURL, gbc_subscribeURL);
 
 		JLabel label_8 = new JLabel("default-graph-uri:");
-		label_8.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		label_8.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_8.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		GridBagConstraints gbc_label_8 = new GridBagConstraints();
 		gbc_label_8.anchor = GridBagConstraints.EAST;
@@ -1464,7 +1483,7 @@ public class Dashboard implements LoginListener {
 
 		defaultGraphURI = new JLabel("-");
 		defaultGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		defaultGraphURI.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		defaultGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_defaultGraphURI = new GridBagConstraints();
 		gbc_defaultGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_defaultGraphURI.insets = new Insets(0, 0, 5, 0);
@@ -1473,7 +1492,7 @@ public class Dashboard implements LoginListener {
 		queryGraphs.add(defaultGraphURI, gbc_defaultGraphURI);
 
 		JLabel label_10 = new JLabel("named-graph-uri:");
-		label_10.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		label_10.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_10.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		GridBagConstraints gbc_label_10 = new GridBagConstraints();
 		gbc_label_10.anchor = GridBagConstraints.EAST;
@@ -1484,7 +1503,7 @@ public class Dashboard implements LoginListener {
 
 		namedGraphURI = new JLabel("-");
 		namedGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		namedGraphURI.setFont(new Font("Lucida Grande", Font.PLAIN, 13));
+		namedGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
 		GridBagConstraints gbc_namedGraphURI = new GridBagConstraints();
 		gbc_namedGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_namedGraphURI.gridx = 1;
@@ -1513,7 +1532,7 @@ public class Dashboard implements LoginListener {
 
 		JLabel label_12 = new JLabel("UPDATES");
 		label_12.setForeground(Color.BLACK);
-		label_12.setFont(new Font("Lucida Grande", Font.BOLD, 14));
+		label_12.setFont(new Font("Montserrat", Font.BOLD, 14));
 		GridBagConstraints gbc_label_12 = new GridBagConstraints();
 		gbc_label_12.anchor = GridBagConstraints.NORTH;
 		gbc_label_12.insets = new Insets(0, 0, 5, 0);
@@ -1529,6 +1548,7 @@ public class Dashboard implements LoginListener {
 		panel_2.add(scrollPane, gbc_scrollPane);
 
 		updateList = new JList<String>();
+		updateList.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		updateList.addListSelectionListener(new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
 				try {
@@ -1552,6 +1572,7 @@ public class Dashboard implements LoginListener {
 		panel_3.setLayout(gbl_panel_3);
 
 		JLabel lblForcedBindings = new JLabel("FORCED BINDINGS");
+		lblForcedBindings.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		lblForcedBindings.setForeground(Color.BLACK);
 		GridBagConstraints gbc_lblForcedBindings = new GridBagConstraints();
 		gbc_lblForcedBindings.anchor = GridBagConstraints.NORTH;
@@ -1568,6 +1589,7 @@ public class Dashboard implements LoginListener {
 		panel_3.add(scrollPane_2, gbc_scrollPane_2);
 
 		updateForcedBindings = new JTable(updateForcedBindingsDM);
+		updateForcedBindings.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		updateForcedBindings.setCellSelectionEnabled(true);
 		updateForcedBindings.setRowSelectionAllowed(false);
 		updateForcedBindings.setFillsViewportHeight(true);
@@ -1606,7 +1628,7 @@ public class Dashboard implements LoginListener {
 
 		JLabel label_14 = new JLabel("QUERIES");
 		label_14.setForeground(Color.BLACK);
-		label_14.setFont(new Font("Lucida Grande", Font.BOLD, 14));
+		label_14.setFont(new Font("Montserrat", Font.BOLD, 14));
 		GridBagConstraints gbc_label_14 = new GridBagConstraints();
 		gbc_label_14.anchor = GridBagConstraints.NORTH;
 		gbc_label_14.insets = new Insets(0, 0, 5, 0);
@@ -1622,6 +1644,7 @@ public class Dashboard implements LoginListener {
 		panel_4.add(scrollPane_1, gbc_scrollPane_1);
 
 		queryList = new JList<String>();
+		queryList.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		queryList.addListSelectionListener(new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
 				try {
@@ -1645,6 +1668,7 @@ public class Dashboard implements LoginListener {
 		panel_5.setLayout(gbl_panel_5);
 
 		JLabel lblForcedBindings_1 = new JLabel("FORCED BINDINGS");
+		lblForcedBindings_1.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		lblForcedBindings_1.setForeground(Color.BLACK);
 		GridBagConstraints gbc_lblForcedBindings_1 = new GridBagConstraints();
 		gbc_lblForcedBindings_1.anchor = GridBagConstraints.NORTH;
@@ -1661,6 +1685,7 @@ public class Dashboard implements LoginListener {
 		panel_5.add(scrollPane_3, gbc_scrollPane_3);
 
 		queryForcedBindings = new JTable(subscribeForcedBindingsDM);
+		queryForcedBindings.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		queryForcedBindings.setFillsViewportHeight(true);
 		scrollPane_3.setViewportView(queryForcedBindings);
 		queryForcedBindings.getModel().addTableModelListener(new TableModelListener() {
@@ -1684,6 +1709,7 @@ public class Dashboard implements LoginListener {
 		sparqlTab.add(update, gbc_update);
 
 		updateSPARQL = new JTextArea();
+		updateSPARQL.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		update.setViewportView(updateSPARQL);
 		updateSPARQL.setLineWrap(true);
 
@@ -1696,6 +1722,7 @@ public class Dashboard implements LoginListener {
 		sparqlTab.add(query, gbc_query);
 
 		querySPARQL = new JTextArea();
+		querySPARQL.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		querySPARQL.setLineWrap(true);
 		query.setViewportView(querySPARQL);
 
@@ -1714,6 +1741,7 @@ public class Dashboard implements LoginListener {
 		panel_6.setLayout(gbl_panel_6);
 
 		updateButton = new JButton("UPDATE");
+		updateButton.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_updateButton = new GridBagConstraints();
 		gbc_updateButton.anchor = GridBagConstraints.WEST;
 		gbc_updateButton.insets = new Insets(0, 0, 0, 5);
@@ -1729,7 +1757,9 @@ public class Dashboard implements LoginListener {
 		updateButton.setEnabled(false);
 
 		updateInfo = new JLabel("---");
+		updateInfo.setFont(new Font("Montserrat", Font.BOLD, 11));
 		GridBagConstraints gbc_udpdateInfo = new GridBagConstraints();
+		gbc_udpdateInfo.gridwidth = 3;
 		gbc_udpdateInfo.fill = GridBagConstraints.VERTICAL;
 		gbc_udpdateInfo.insets = new Insets(0, 0, 0, 5);
 		gbc_udpdateInfo.anchor = GridBagConstraints.WEST;
@@ -1752,6 +1782,7 @@ public class Dashboard implements LoginListener {
 		panel_7.setLayout(gbl_panel_7);
 
 		btnQuery = new JButton("QUERY");
+		btnQuery.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnQuery.setEnabled(false);
 		btnQuery.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -1766,6 +1797,7 @@ public class Dashboard implements LoginListener {
 		panel_7.add(btnQuery, gbc_btnQuery);
 
 		queryInfo = new JLabel("---");
+		queryInfo.setFont(new Font("Montserrat", Font.BOLD, 11));
 		GridBagConstraints gbc_queryInfo = new GridBagConstraints();
 		gbc_queryInfo.fill = GridBagConstraints.VERTICAL;
 		gbc_queryInfo.insets = new Insets(0, 0, 0, 5);
@@ -1775,6 +1807,7 @@ public class Dashboard implements LoginListener {
 		panel_7.add(queryInfo, gbc_queryInfo);
 
 		subscribeButton = new JButton("SUBSCRIBE");
+		subscribeButton.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_subscribeButton = new GridBagConstraints();
 		gbc_subscribeButton.anchor = GridBagConstraints.WEST;
 		gbc_subscribeButton.gridx = 2;
@@ -1797,6 +1830,7 @@ public class Dashboard implements LoginListener {
 		sparqlTab.add(results, gbc_results);
 
 		bindingsResultsTable = new JTable(bindingsDM);
+		bindingsResultsTable.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		bindingsResultsTable.setBorder(UIManager.getBorder("Button.border"));
 		bindingsResultsTable.setFillsViewportHeight(true);
 		bindingsResultsTable.setDefaultRenderer(BindingValue.class, bindingsRender);
@@ -1814,7 +1848,7 @@ public class Dashboard implements LoginListener {
 
 		JPanel namespaces = new JPanel();
 		mainTabs.addTab("Namespaces", null, namespaces, null);
-		namespaces.setBorder(new TitledBorder(null, "Namespaces", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		namespaces.setBorder(null);
 		GridBagLayout gbl_namespaces = new GridBagLayout();
 		gbl_namespaces.columnWidths = new int[] { 0, 0, 0 };
 		gbl_namespaces.rowHeights = new int[] { 43, 0 };
@@ -1832,6 +1866,7 @@ public class Dashboard implements LoginListener {
 		namespaces.add(scrollPane_4, gbc_scrollPane_4);
 
 		namespacesTable = new JTable(namespacesDM);
+		namespacesTable.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		scrollPane_4.setViewportView(namespacesTable);
 
 		JPanel explorerPanel = new JPanel();
@@ -1848,8 +1883,9 @@ public class Dashboard implements LoginListener {
 		gbl_explorerPanel.columnWeights = new double[] { 1.0, 0.0, Double.MIN_VALUE };
 		gbl_explorerPanel.rowWeights = new double[] { 0.0, 0.0, 1.0, 1.0, Double.MIN_VALUE };
 		explorerPanel.setLayout(gbl_explorerPanel);
-		
+
 		graphsEndpointLabel = new JLabel("Endpoint");
+		graphsEndpointLabel.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		GridBagConstraints gbc_graphsEndpointLabel = new GridBagConstraints();
 		gbc_graphsEndpointLabel.insets = new Insets(5, 0, 5, 5);
 		gbc_graphsEndpointLabel.gridx = 0;
@@ -1857,37 +1893,42 @@ public class Dashboard implements LoginListener {
 		explorerPanel.add(graphsEndpointLabel, gbc_graphsEndpointLabel);
 
 		JLabel lblGraphs = new JLabel("Graphs");
-		lblGraphs.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		lblGraphs.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_lblGraphs = new GridBagConstraints();
 		gbc_lblGraphs.insets = new Insets(0, 0, 5, 5);
 		gbc_lblGraphs.gridx = 0;
 		gbc_lblGraphs.gridy = 1;
 		explorerPanel.add(lblGraphs, gbc_lblGraphs);
-		
+
 		JButton btnNewButton_1 = new JButton("DROP");
+		btnNewButton_1.setFont(new Font("Montserrat", Font.BOLD, 10));
 		btnNewButton_1.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				int[] rows = graphsTable.getSelectedRows();
 				if (rows.length > 0) {
-					int dialogResult = JOptionPane.showConfirmDialog (null, "Are you sure? "+rows.length+ " graphs will be deleted!","Warning",JOptionPane.YES_NO_OPTION);
-					if(dialogResult == JOptionPane.YES_OPTION){
+					int dialogResult = JOptionPane.showConfirmDialog(null,
+							"Are you sure? " + rows.length + " graphs will be deleted!", "Warning",
+							JOptionPane.YES_NO_OPTION);
+					if (dialogResult == JOptionPane.YES_OPTION) {
 						for (int i : rows) {
 							Bindings forced = new Bindings();
 							forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(i, 0).toString()));
 							try {
 								if (sepaClient == null) {
-							        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-							        return;
+									JOptionPane.showMessageDialog(null, "You need to sign in first",
+											"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+									return;
 								}
 								sepaClient.update("DROP_GRAPH", forced, 5000);
 							} catch (SEPAProtocolException | SEPASecurityException | IOException
 									| SEPAPropertiesException | SEPABindingsException e1) {
 								logger.error(e1.getMessage());
-								if (logger.isTraceEnabled()) e1.printStackTrace();
+								if (logger.isTraceEnabled())
+									e1.printStackTrace();
 							}
 						}
-						
+
 						onExplorerOpenTab(true);
 					}
 				}
@@ -1911,6 +1952,8 @@ public class Dashboard implements LoginListener {
 		explorerPanel.add(scrollPane_9, gbc_scrollPane_9);
 
 		graphsTable = new JTable(graphs);
+		graphsTable.setRowSelectionAllowed(false);
+		graphsTable.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(graphsTable.getModel());
 		Comparator<Integer> compare = new Comparator<Integer>() {
 			@Override
@@ -1920,6 +1963,8 @@ public class Dashboard implements LoginListener {
 		};
 		sorter.setComparator(1, compare);
 		graphsTable.setRowSorter(sorter);
+		graphsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		graphsTable.setCellSelectionEnabled(true);
 
 		// graphsTable.setAutoCreateRowSorter(true);
 		scrollPane_9.setViewportView(graphsTable);
@@ -1942,13 +1987,13 @@ public class Dashboard implements LoginListener {
 		splitPane.setLeftComponent(panel);
 		GridBagLayout gbl_panel = new GridBagLayout();
 		gbl_panel.columnWidths = new int[] { 264, 0 };
-		gbl_panel.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_panel.rowHeights = new int[] { 0, 0, 0 };
 		gbl_panel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panel.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panel.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
 		panel.setLayout(gbl_panel);
 
-		JLabel lblNewLabel = new JLabel("Classe tree");
-		lblNewLabel.setFont(new Font("Lucida Grande", Font.BOLD, 13));
+		JLabel lblNewLabel = new JLabel("Class tree");
+		lblNewLabel.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_lblNewLabel = new GridBagConstraints();
 		gbc_lblNewLabel.insets = new Insets(0, 0, 5, 0);
 		gbc_lblNewLabel.gridx = 0;
@@ -1959,13 +2004,14 @@ public class Dashboard implements LoginListener {
 		GridBagConstraints gbc_scrollPane_7 = new GridBagConstraints();
 		gbc_scrollPane_7.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane_7.gridx = 0;
-		gbc_scrollPane_7.gridy = 2;
+		gbc_scrollPane_7.gridy = 1;
 		panel.add(scrollPane_7, gbc_scrollPane_7);
 
 		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer();
 		explorerTreeRenderer.setNamespaces(namespacesDM);
 
 		explorerTree = new JTree();
+		explorerTree.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		scrollPane_7.setViewportView(explorerTree);
 		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
 			public void valueChanged(TreeSelectionEvent e) {
@@ -1980,57 +2026,76 @@ public class Dashboard implements LoginListener {
 		splitPane.setRightComponent(panel_1);
 		GridBagLayout gbl_panel_1 = new GridBagLayout();
 		gbl_panel_1.columnWidths = new int[] { 0, 0, 0, 0 };
-		gbl_panel_1.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_panel_1.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
 		gbl_panel_1.columnWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
-		gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 1.0, Double.MIN_VALUE };
 		panel_1.setLayout(gbl_panel_1);
-
-		JLabel lblProperties = new JLabel("Properties");
-		GridBagConstraints gbc_lblProperties = new GridBagConstraints();
-		gbc_lblProperties.insets = new Insets(0, 0, 5, 5);
-		gbc_lblProperties.gridx = 1;
-		gbc_lblProperties.gridy = 0;
-		panel_1.add(lblProperties, gbc_lblProperties);
-		lblProperties.setFont(new Font("Lucida Grande", Font.BOLD, 13));
-
-		JButton btnRefresh = new JButton("Refresh");
-		btnRefresh.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				onExplorerOpenTab(true);
-			}
-		});
-		GridBagConstraints gbc_btnRefresh = new GridBagConstraints();
-		gbc_btnRefresh.insets = new Insets(5, 0, 5, 0);
-		gbc_btnRefresh.gridx = 2;
-		gbc_btnRefresh.gridy = 0;
-		panel_1.add(btnRefresh, gbc_btnRefresh);
-
-		buttonStackBackward = new JButton("Back");
-		GridBagConstraints gbc_buttonStackBackward = new GridBagConstraints();
-		gbc_buttonStackBackward.anchor = GridBagConstraints.WEST;
-		gbc_buttonStackBackward.insets = new Insets(0, 0, 5, 5);
-		gbc_buttonStackBackward.gridx = 0;
-		gbc_buttonStackBackward.gridy = 1;
-		panel_1.add(buttonStackBackward, gbc_buttonStackBackward);
-
-		currentSubject = new JLabel("uri");
-		GridBagConstraints gbc_currentSubject = new GridBagConstraints();
-		gbc_currentSubject.gridwidth = 2;
-		gbc_currentSubject.insets = new Insets(0, 0, 5, 0);
-		gbc_currentSubject.gridx = 1;
-		gbc_currentSubject.gridy = 1;
-		panel_1.add(currentSubject, gbc_currentSubject);
+		
+				JButton btnRefresh = new JButton("Refresh");
+				btnRefresh.setFont(new Font("Montserrat", Font.BOLD, 13));
+				btnRefresh.addMouseListener(new MouseAdapter() {
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						onExplorerOpenTab(true);
+					}
+				});
+				
+				JLabel lblNewLabel_1 = new JLabel("Properties");
+				lblNewLabel_1.setFont(new Font("Montserrat", Font.BOLD, 13));
+				GridBagConstraints gbc_lblNewLabel_1 = new GridBagConstraints();
+				gbc_lblNewLabel_1.insets = new Insets(0, 0, 5, 5);
+				gbc_lblNewLabel_1.gridx = 1;
+				gbc_lblNewLabel_1.gridy = 0;
+				panel_1.add(lblNewLabel_1, gbc_lblNewLabel_1);
+				GridBagConstraints gbc_btnRefresh = new GridBagConstraints();
+				gbc_btnRefresh.insets = new Insets(5, 0, 5, 0);
+				gbc_btnRefresh.gridx = 2;
+				gbc_btnRefresh.gridy = 0;
+				panel_1.add(btnRefresh, gbc_btnRefresh);
+				
+						currentSubject = new JLabel("uri");
+						GridBagConstraints gbc_currentSubject = new GridBagConstraints();
+						gbc_currentSubject.gridwidth = 3;
+						gbc_currentSubject.insets = new Insets(0, 0, 5, 5);
+						gbc_currentSubject.gridx = 0;
+						gbc_currentSubject.gridy = 1;
+						panel_1.add(currentSubject, gbc_currentSubject);
+				
+						buttonStackBackward = new JButton("Back");
+						buttonStackBackward.setFont(new Font("Montserrat Alternates", Font.PLAIN, 11));
+						GridBagConstraints gbc_buttonStackBackward = new GridBagConstraints();
+						gbc_buttonStackBackward.anchor = GridBagConstraints.WEST;
+						gbc_buttonStackBackward.insets = new Insets(0, 0, 5, 5);
+						gbc_buttonStackBackward.gridx = 0;
+						gbc_buttonStackBackward.gridy = 2;
+						panel_1.add(buttonStackBackward, gbc_buttonStackBackward);
+						buttonStackBackward.addMouseListener(new MouseAdapter() {
+							@Override
+							public void mouseClicked(MouseEvent e) {
+								onExplorerBackButton(e);
+							}
+						});
+						buttonStackBackward.setVisible(false);
+		
+				JLabel lblProperties = new JLabel("Double click on the predicate to follow the URI link & double click on the object to edit it");
+				GridBagConstraints gbc_lblProperties = new GridBagConstraints();
+				gbc_lblProperties.gridwidth = 4;
+				gbc_lblProperties.insets = new Insets(0, 0, 5, 0);
+				gbc_lblProperties.gridx = 0;
+				gbc_lblProperties.gridy = 3;
+				panel_1.add(lblProperties, gbc_lblProperties);
+				lblProperties.setFont(new Font("Montserrat", Font.ITALIC, 10));
 
 		JScrollPane scrollPane_8 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_8 = new GridBagConstraints();
 		gbc_scrollPane_8.fill = GridBagConstraints.BOTH;
 		gbc_scrollPane_8.gridwidth = 3;
 		gbc_scrollPane_8.gridx = 0;
-		gbc_scrollPane_8.gridy = 2;
+		gbc_scrollPane_8.gridy = 4;
 		panel_1.add(scrollPane_8, gbc_scrollPane_8);
 
 		tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
+		tableInstanceProperties.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		tableInstanceProperties.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -2066,10 +2131,11 @@ public class Dashboard implements LoginListener {
 					Response ret = null;
 
 					if (sepaClient == null) {
-				        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-				        return;
+						JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+								JOptionPane.INFORMATION_MESSAGE);
+						return;
 					}
-					
+
 					if (type == null) {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
@@ -2100,13 +2166,6 @@ public class Dashboard implements LoginListener {
 		});
 
 		scrollPane_8.setViewportView(tableInstanceProperties);
-		buttonStackBackward.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				onExplorerBackButton(e);
-			}
-		});
-		buttonStackBackward.setVisible(false);
 
 		JScrollPane scrollPane_5 = new JScrollPane();
 		GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
@@ -2118,6 +2177,7 @@ public class Dashboard implements LoginListener {
 		frmSepaDashboard.getContentPane().add(scrollPane_5, gbc_scrollPane_5);
 
 		textArea = new JTextArea();
+		textArea.setFont(new Font("Montserrat", Font.PLAIN, 10));
 		textArea.setLineWrap(true);
 		scrollPane_5.setViewportView(textArea);
 		TextAreaAppender appender = new TextAreaAppender(textArea);
@@ -2138,6 +2198,7 @@ public class Dashboard implements LoginListener {
 		infoPanel.setLayout(gbl_infoPanel);
 
 		JButton btnLoadXmlProfile = new JButton("Load JSAP");
+		btnLoadXmlProfile.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnLoadXmlProfile.setForeground(Color.BLACK);
 		btnLoadXmlProfile.setBackground(Color.WHITE);
 		GridBagConstraints gbc_btnLoadXmlProfile = new GridBagConstraints();
@@ -2158,6 +2219,7 @@ public class Dashboard implements LoginListener {
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
 
 		chckbxMerge = new JCheckBox("merge");
+		chckbxMerge.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		chckbxMerge.setSelected(true);
 		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
 		gbc_chckbxMerge.anchor = GridBagConstraints.WEST;
@@ -2167,6 +2229,7 @@ public class Dashboard implements LoginListener {
 		infoPanel.add(chckbxMerge, gbc_chckbxMerge);
 
 		chckbxDatatype = new JCheckBox("Datatype");
+		chckbxDatatype.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		chckbxDatatype.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				onDatatypeCheckbox(e);
@@ -2174,6 +2237,7 @@ public class Dashboard implements LoginListener {
 		});
 
 		JLabel lblToms = new JLabel("Timeout (ms)");
+		lblToms.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		GridBagConstraints gbc_lblToms = new GridBagConstraints();
 		gbc_lblToms.anchor = GridBagConstraints.EAST;
 		gbc_lblToms.insets = new Insets(0, 0, 0, 5);
@@ -2183,6 +2247,7 @@ public class Dashboard implements LoginListener {
 		lblToms.setForeground(Color.BLACK);
 
 		timeout = new JTextField();
+		timeout.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		GridBagConstraints gbc_timeout = new GridBagConstraints();
 		gbc_timeout.anchor = GridBagConstraints.EAST;
 		gbc_timeout.insets = new Insets(0, 0, 0, 5);
@@ -2199,6 +2264,7 @@ public class Dashboard implements LoginListener {
 		infoPanel.add(chckbxDatatype, gbc_chckbxDatatype);
 
 		chckbxQname = new JCheckBox("Qname");
+		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
 		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
 		gbc_chckbxQname.gridx = 6;
@@ -2212,6 +2278,7 @@ public class Dashboard implements LoginListener {
 		chckbxQname.setSelected(true);
 
 		JButton btnNewButton = new JButton("Clear results");
+		btnNewButton.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
 		gbc_btnNewButton.insets = new Insets(0, 0, 0, 5);
 		gbc_btnNewButton.gridx = 7;
@@ -2224,6 +2291,7 @@ public class Dashboard implements LoginListener {
 		});
 
 		JButton btnClean = new JButton("Clear log");
+		btnClean.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnClean.setForeground(Color.BLACK);
 		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
 		GridBagConstraints gbc_btnClean = new GridBagConstraints();
@@ -2281,10 +2349,11 @@ public class Dashboard implements LoginListener {
 
 			try {
 				if (sepaClient == null) {
-			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-			        return;
+					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+							JOptionPane.INFORMATION_MESSAGE);
+					return;
 				}
-				
+
 				Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
 
 				if (retResponse.isError()) {
@@ -2303,10 +2372,11 @@ public class Dashboard implements LoginListener {
 				forced.addBinding("graph", graph);
 
 				if (sepaClient == null) {
-			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-			        return;
+					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+							JOptionPane.INFORMATION_MESSAGE);
+					return;
 				}
-				
+
 				retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2338,10 +2408,11 @@ public class Dashboard implements LoginListener {
 			Response retResponse;
 			try {
 				if (sepaClient == null) {
-			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-			        return;
+					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+							JOptionPane.INFORMATION_MESSAGE);
+					return;
 				}
-				
+
 				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2375,10 +2446,11 @@ public class Dashboard implements LoginListener {
 		Response retResponse;
 		try {
 			if (sepaClient == null) {
-		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-		        return;
+				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+						JOptionPane.INFORMATION_MESSAGE);
+				return;
 			}
-			
+
 			retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2420,10 +2492,11 @@ public class Dashboard implements LoginListener {
 			Response retResponse;
 			try {
 				if (sepaClient == null) {
-			        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-			        return;
+					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+							JOptionPane.INFORMATION_MESSAGE);
+					return;
 				}
-				
+
 				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2463,10 +2536,11 @@ public class Dashboard implements LoginListener {
 
 		try {
 			if (sepaClient == null) {
-		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-		        return;
+				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+						JOptionPane.INFORMATION_MESSAGE);
+				return;
 			}
-			
+
 			Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
 
 			if (retResponse.isError()) {
@@ -2492,20 +2566,21 @@ public class Dashboard implements LoginListener {
 
 	protected void onExplorerOpenTab(boolean refresh) {
 		if (sepaClient == null) {
-	        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-	        graphs.clear();
-	        return;
+			JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+					JOptionPane.INFORMATION_MESSAGE);
+			graphs.clear();
+			return;
 		}
-		
+
 		try {
 			graphsEndpointLabel.setText(appProfile.getHost());
-			
+
 			if (!refresh && graphs.getRowCount() != 0)
 				return;
 
 			if (refresh)
 				graphs.clear();
-			
+
 			Response retResponse = sepaClient.query("GRAPHS", null, 5000);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2643,10 +2718,11 @@ public class Dashboard implements LoginListener {
 		}
 
 		if (sepaClient == null) {
-	        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-	        return;
+			JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
 		}
-		
+
 		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, Integer.parseInt(timeout.getText()));
 	}
 
@@ -2671,12 +2747,13 @@ public class Dashboard implements LoginListener {
 
 		try {
 			Instant start = Instant.now();
-			
+
 			if (sepaClient == null) {
-		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-		        return;
+				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+						JOptionPane.INFORMATION_MESSAGE);
+				return;
 			}
-			
+
 			Response ret = sepaClient.query(queryID, querySPARQL.getText(), bindings,
 					Integer.parseInt(timeout.getText()));
 			Instant stop = Instant.now();
@@ -2728,12 +2805,13 @@ public class Dashboard implements LoginListener {
 
 		try {
 			Instant start = Instant.now();
-			
+
 			if (sepaClient == null) {
-		        JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-		        return;
+				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+						JOptionPane.INFORMATION_MESSAGE);
+				return;
 			}
-			
+
 			Response ret = sepaClient.update(updateID, updateSPARQL.getText(), bindings,
 					Integer.parseInt(timeout.getText()));
 			Instant stop = Instant.now();
@@ -2760,7 +2838,7 @@ public class Dashboard implements LoginListener {
 		if (id == null)
 			return;
 		updateID = id;
-		//JSAP app = sepaClient.getApplicationProfile();
+		// JSAP app = sepaClient.getApplicationProfile();
 		updateSPARQL.setText(appProfile.getSPARQLUpdate(id));
 
 		Bindings bindings = appProfile.getUpdateBindings(id);
@@ -2778,7 +2856,8 @@ public class Dashboard implements LoginListener {
 		String port = "";
 		if (appProfile.getUpdatePort(id) != -1)
 			port = ":" + appProfile.getUpdatePort(id);
-		String url = appProfile.getUpdateProtocolScheme(id) + "://" + appProfile.getUpdateHost(id) + port + appProfile.getUpdatePath(id);
+		String url = appProfile.getUpdateProtocolScheme(id) + "://" + appProfile.getUpdateHost(id) + port
+				+ appProfile.getUpdatePath(id);
 		if (appProfile.getUpdateMethod(id).equals(HTTPMethod.GET))
 			updateURL.setText("GET " + url);
 		else if (appProfile.getUpdateMethod(id).equals(HTTPMethod.POST))
@@ -2797,7 +2876,7 @@ public class Dashboard implements LoginListener {
 			return;
 
 		queryID = id;
-		//JSAP app = sepaClient.getApplicationProfile();
+		// JSAP app = sepaClient.getApplicationProfile();
 		querySPARQL.setText(appProfile.getSPARQLQuery(id));
 
 		Bindings bindings = appProfile.getQueryBindings(id);
@@ -2815,7 +2894,8 @@ public class Dashboard implements LoginListener {
 		String port = "";
 		if (appProfile.getQueryPort(id) != -1)
 			port = ":" + appProfile.getQueryPort(id);
-		String url = appProfile.getQueryProtocolScheme(id) + "://" + appProfile.getQueryHost(id) + port + appProfile.getQueryPath(id);
+		String url = appProfile.getQueryProtocolScheme(id) + "://" + appProfile.getQueryHost(id) + port
+				+ appProfile.getQueryPath(id);
 
 		if (appProfile.getQueryMethod(id).equals(HTTPMethod.GET))
 			queryURL.setText("GET " + url);
@@ -2940,14 +3020,14 @@ public class Dashboard implements LoginListener {
 	// LOGIN
 
 	@Override
-	public void onLogin(String id,ClientSecurityManager sec) {
+	public void onLogin(String id, ClientSecurityManager sec) {
 		try {
 			sm = sec;
 			sepaClient = new GenericClient(appProfile, sm, handler);
-			
+
 			login.setVisible(false);
 			btnLogin.setEnabled(true);
-			btnLogin.setText("Sign out "+id);
+			btnLogin.setText("Sign out " + id);
 			signedIn = true;
 		} catch (SEPAProtocolException e) {
 			logger.error(e.getMessage());
@@ -2961,8 +3041,8 @@ public class Dashboard implements LoginListener {
 
 	@Override
 	public void onLoginClose() {
-		//System.exit(0);
-		frmSepaDashboard.setTitle(title);
+		// System.exit(0);
+		//frmSepaDashboard.setTitle(title);
 	}
 
 	@Override
