@@ -230,6 +230,7 @@ public class Dashboard implements LoginListener {
 	private JLabel graphsEndpointLabel;
 
 	private boolean signedIn = false;
+	private JTextField nRetry;
 
 	class DashboardHandler implements ISubscriptionHandler {
 		protected String unsubSpuid;
@@ -333,7 +334,7 @@ public class Dashboard implements LoginListener {
 									JOptionPane.INFORMATION_MESSAGE);
 							return;
 						}
-						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()));
+						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 						new Thread() {
 							public void run() {
 								try {
@@ -852,7 +853,7 @@ public class Dashboard implements LoginListener {
 								JOptionPane.INFORMATION_MESSAGE);
 						return;
 					}
-					sepaClient.update("UPDATE_LITERAL", newBindings, 5000);
+					sepaClient.update("UPDATE_LITERAL", newBindings, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 				} else {
 					newBindings.addBinding("object", new RDFTermURI((String) value));
 					if (sepaClient == null) {
@@ -860,7 +861,7 @@ public class Dashboard implements LoginListener {
 								JOptionPane.INFORMATION_MESSAGE);
 						return;
 					}
-					sepaClient.update("UPDATE_URI", newBindings, 5000);
+					sepaClient.update("UPDATE_URI", newBindings, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 				}
 			} catch (SEPABindingsException | SEPAProtocolException | SEPASecurityException | IOException
 					| SEPAPropertiesException e) {
@@ -1920,7 +1921,7 @@ public class Dashboard implements LoginListener {
 											"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
 									return;
 								}
-								sepaClient.update("DROP_GRAPH", forced, 5000);
+								sepaClient.update("DROP_GRAPH", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 							} catch (SEPAProtocolException | SEPASecurityException | IOException
 									| SEPAPropertiesException | SEPABindingsException e1) {
 								logger.error(e1.getMessage());
@@ -2140,17 +2141,17 @@ public class Dashboard implements LoginListener {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);
+						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 					} else if (type.equals("URI") || type.equals("BNODE")) {
 						object = new RDFTermURI(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("UPDATE_URI", forcedBindings, 5000);
+						ret = sepaClient.update("UPDATE_URI", forcedBindings, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 					} else {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1), type);
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, 5000);
+						ret = sepaClient.update("UPDATE_LITERAL", forcedBindings, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 					}
 
 					if (ret.isError())
@@ -2191,9 +2192,9 @@ public class Dashboard implements LoginListener {
 		gbc_infoPanel.gridy = 3;
 		frmSepaDashboard.getContentPane().add(infoPanel, gbc_infoPanel);
 		GridBagLayout gbl_infoPanel = new GridBagLayout();
-		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 0, 97, 76, 0 };
+		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 0, 0, 97, 76, 0 };
 		gbl_infoPanel.rowHeights = new int[] { 29, 0 };
-		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		gbl_infoPanel.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		infoPanel.setLayout(gbl_infoPanel);
 
@@ -2235,31 +2236,51 @@ public class Dashboard implements LoginListener {
 				onDatatypeCheckbox(e);
 			}
 		});
-
-		JLabel lblToms = new JLabel("Timeout (ms)");
-		lblToms.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		GridBagConstraints gbc_lblToms = new GridBagConstraints();
-		gbc_lblToms.anchor = GridBagConstraints.EAST;
-		gbc_lblToms.insets = new Insets(0, 0, 0, 5);
-		gbc_lblToms.gridx = 3;
-		gbc_lblToms.gridy = 0;
-		infoPanel.add(lblToms, gbc_lblToms);
-		lblToms.setForeground(Color.BLACK);
-
-		timeout = new JTextField();
-		timeout.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		GridBagConstraints gbc_timeout = new GridBagConstraints();
-		gbc_timeout.anchor = GridBagConstraints.EAST;
-		gbc_timeout.insets = new Insets(0, 0, 0, 5);
-		gbc_timeout.gridx = 4;
-		gbc_timeout.gridy = 0;
-		infoPanel.add(timeout, gbc_timeout);
-		timeout.setText("5000");
-		timeout.setColumns(10);
+		
+				JLabel lblToms = new JLabel("Timeout (ms)");
+				lblToms.setFont(new Font("Montserrat", Font.PLAIN, 11));
+				GridBagConstraints gbc_lblToms = new GridBagConstraints();
+				gbc_lblToms.anchor = GridBagConstraints.EAST;
+				gbc_lblToms.insets = new Insets(0, 0, 0, 5);
+				gbc_lblToms.gridx = 2;
+				gbc_lblToms.gridy = 0;
+				infoPanel.add(lblToms, gbc_lblToms);
+				lblToms.setForeground(Color.BLACK);
+		
+				timeout = new JTextField();
+				timeout.setFont(new Font("Montserrat", Font.PLAIN, 11));
+				GridBagConstraints gbc_timeout = new GridBagConstraints();
+				gbc_timeout.fill = GridBagConstraints.HORIZONTAL;
+				gbc_timeout.insets = new Insets(0, 0, 0, 5);
+				gbc_timeout.gridx = 3;
+				gbc_timeout.gridy = 0;
+				infoPanel.add(timeout, gbc_timeout);
+				timeout.setText("5000");
+				timeout.setColumns(10);
+		
+		JLabel lblNewLabel_2 = new JLabel("Retry");
+		lblNewLabel_2.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		GridBagConstraints gbc_lblNewLabel_2 = new GridBagConstraints();
+		gbc_lblNewLabel_2.anchor = GridBagConstraints.EAST;
+		gbc_lblNewLabel_2.insets = new Insets(0, 0, 0, 5);
+		gbc_lblNewLabel_2.gridx = 4;
+		gbc_lblNewLabel_2.gridy = 0;
+		infoPanel.add(lblNewLabel_2, gbc_lblNewLabel_2);
+		
+		nRetry = new JTextField();
+		nRetry.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		nRetry.setText("0");
+		GridBagConstraints gbc_nRetry = new GridBagConstraints();
+		gbc_nRetry.fill = GridBagConstraints.HORIZONTAL;
+		gbc_nRetry.insets = new Insets(0, 0, 0, 5);
+		gbc_nRetry.gridx = 5;
+		gbc_nRetry.gridy = 0;
+		infoPanel.add(nRetry, gbc_nRetry);
+		nRetry.setColumns(10);
 		chckbxDatatype.setSelected(true);
 		GridBagConstraints gbc_chckbxDatatype = new GridBagConstraints();
 		gbc_chckbxDatatype.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxDatatype.gridx = 5;
+		gbc_chckbxDatatype.gridx = 6;
 		gbc_chckbxDatatype.gridy = 0;
 		infoPanel.add(chckbxDatatype, gbc_chckbxDatatype);
 
@@ -2267,7 +2288,7 @@ public class Dashboard implements LoginListener {
 		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
 		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxQname.gridx = 6;
+		gbc_chckbxQname.gridx = 7;
 		gbc_chckbxQname.gridy = 0;
 		infoPanel.add(chckbxQname, gbc_chckbxQname);
 		chckbxQname.addChangeListener(new ChangeListener() {
@@ -2281,7 +2302,7 @@ public class Dashboard implements LoginListener {
 		btnNewButton.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
 		gbc_btnNewButton.insets = new Insets(0, 0, 0, 5);
-		gbc_btnNewButton.gridx = 7;
+		gbc_btnNewButton.gridx = 8;
 		gbc_btnNewButton.gridy = 0;
 		infoPanel.add(btnNewButton, gbc_btnNewButton);
 		btnNewButton.addActionListener(new ActionListener() {
@@ -2296,7 +2317,7 @@ public class Dashboard implements LoginListener {
 		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
 		GridBagConstraints gbc_btnClean = new GridBagConstraints();
 		gbc_btnClean.anchor = GridBagConstraints.NORTHWEST;
-		gbc_btnClean.gridx = 8;
+		gbc_btnClean.gridx = 9;
 		gbc_btnClean.gridy = 0;
 		infoPanel.add(btnClean, gbc_btnClean);
 		btnClean.addActionListener(new ActionListener() {
@@ -2354,7 +2375,7 @@ public class Dashboard implements LoginListener {
 					return;
 				}
 
-				Response retResponse = sepaClient.query("SUB_CLASSES", forced, 10000);
+				Response retResponse = sepaClient.query("SUB_CLASSES", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2377,7 +2398,7 @@ public class Dashboard implements LoginListener {
 					return;
 				}
 
-				retResponse = sepaClient.query("INDIVIDUALS", forced, 10000);
+				retResponse = sepaClient.query("INDIVIDUALS", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 				if (retResponse.isError()) {
 					logger.error(retResponse);
 				} else {
@@ -2413,7 +2434,7 @@ public class Dashboard implements LoginListener {
 					return;
 				}
 
-				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+				retResponse = sepaClient.query("URI_GRAPH", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 				if (retResponse.isError()) {
 					logger.error(retResponse);
 				} else {
@@ -2451,7 +2472,7 @@ public class Dashboard implements LoginListener {
 				return;
 			}
 
-			retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+			retResponse = sepaClient.query("URI_GRAPH", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 			if (retResponse.isError()) {
 				logger.error(retResponse);
 			} else {
@@ -2497,7 +2518,7 @@ public class Dashboard implements LoginListener {
 					return;
 				}
 
-				retResponse = sepaClient.query("URI_GRAPH", forced, 10000);
+				retResponse = sepaClient.query("URI_GRAPH", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 				if (retResponse.isError()) {
 					logger.error(retResponse);
 				} else {
@@ -2541,7 +2562,7 @@ public class Dashboard implements LoginListener {
 				return;
 			}
 
-			Response retResponse = sepaClient.query("TOP_CLASSES", forced, 10000);
+			Response retResponse = sepaClient.query("TOP_CLASSES", forced, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2581,7 +2602,7 @@ public class Dashboard implements LoginListener {
 			if (refresh)
 				graphs.clear();
 
-			Response retResponse = sepaClient.query("GRAPHS", null, 5000);
+			Response retResponse = sepaClient.query("GRAPHS", null, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 			if (retResponse.isError()) {
 				logger.error(retResponse);
 			} else {
@@ -2723,7 +2744,7 @@ public class Dashboard implements LoginListener {
 			return;
 		}
 
-		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, Integer.parseInt(timeout.getText()));
+		sepaClient.subscribe(queryID, querySPARQL.getText(), bindings, Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 	}
 
 	protected void query() throws SEPAPropertiesException, SEPABindingsException {
@@ -2754,8 +2775,7 @@ public class Dashboard implements LoginListener {
 				return;
 			}
 
-			Response ret = sepaClient.query(queryID, querySPARQL.getText(), bindings,
-					Integer.parseInt(timeout.getText()));
+			Response ret = sepaClient.query(queryID, querySPARQL.getText(), bindings,Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 			Instant stop = Instant.now();
 			if (ret.isError()) {
 				logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
@@ -2812,8 +2832,7 @@ public class Dashboard implements LoginListener {
 				return;
 			}
 
-			Response ret = sepaClient.update(updateID, updateSPARQL.getText(), bindings,
-					Integer.parseInt(timeout.getText()));
+			Response ret = sepaClient.update(updateID, updateSPARQL.getText(), bindings,Integer.parseInt(timeout.getText()),Integer.parseInt(nRetry.getText()));
 			Instant stop = Instant.now();
 			if (ret.isError()) {
 				logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
