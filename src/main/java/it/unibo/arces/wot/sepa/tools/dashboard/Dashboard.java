@@ -264,8 +264,8 @@ public class Dashboard implements LoginListener {
 		}
 
 		@Override
-		public void onBrokenConnection() {
-			logger.error("*** BROKEN CONNECTION ***");
+		public void onBrokenConnection(ErrorResponse err) {
+			logger.error("*** BROKEN CONNECTION *** "+err);
 		}
 
 		@Override
