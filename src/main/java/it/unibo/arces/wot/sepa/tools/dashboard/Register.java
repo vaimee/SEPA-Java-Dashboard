@@ -13,29 +13,22 @@ import org.apache.logging.log4j.Logger;
 
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
-import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
+import it.unibo.arces.wot.sepa.commons.response.RegistrationResponse;
 import it.unibo.arces.wot.sepa.commons.response.Response;
-import it.unibo.arces.wot.sepa.commons.security.ClientSecurityManager;
 import it.unibo.arces.wot.sepa.commons.security.OAuthProperties;
+import it.unibo.arces.wot.sepa.commons.security.ClientSecurityManager;
 
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-import javax.swing.JPasswordField;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
-import javax.swing.SwingConstants;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import javax.swing.JCheckBox;
-
-public class Login extends JDialog {
+public class Register extends JDialog {
 	private static final Logger logger = LogManager.getLogger();
 
 	/**
@@ -44,47 +37,31 @@ public class Login extends JDialog {
 	private static final long serialVersionUID = 544263217213326603L;
 	private final JPanel contentPanel = new JPanel();
 	private JTextField ID;
-	private JPasswordField PWD;
+	private JTextField USERNAME;
+	private JTextField TOKEN;
+	
 	private JLabel lblPassword;
-
 	private JButton btnLogin;
-
-	private OAuthProperties oauth;
+	private JLabel lblNewLabel;
+	
 	private ClientSecurityManager sm;
-	private LoginListener m_listener;
-	private JCheckBox chckRemeberMe;
+	private OAuthProperties oauth;
+	
 	/**
 	 * Create the dialog.
 	 */
-	public Login(OAuthProperties oauth, LoginListener listener, JFrame parent) {//,String clientid,String clientsecret) {
-		this.oauth = oauth;
-		m_listener = listener;
+	public Register(OAuthProperties prop,JFrame parent,String clientid,String username,String initialAccessToken) {
+		oauth = prop;
 		
 		setType(Type.POPUP);
 		setModal(true);
 		if (oauth == null)
-			throw new IllegalArgumentException("OAuthProperties is null");
-		if (m_listener == null)
-			throw new IllegalArgumentException("LoginListener is null");
-
-//		ButtonGroup group = new ButtonGroup();
+			throw new IllegalArgumentException("OAuth is null");
 
 		setResizable(false);
 		setLocationRelativeTo(parent);
 
-		// add a window listener
-		addWindowListener(new WindowAdapter() {
-			public void windowClosed(WindowEvent e) {
-				logger.info("jdialog window closed");
-			}
-
-			public void windowClosing(WindowEvent e) {
-				logger.info("jdialog window closing");
-				m_listener.onLoginClose();
-			}
-		});
-
-		setTitle("SEPA Login");
+		setTitle("SEPA Register");
 		setBounds(100, 100, 347, 152);
 		getContentPane().setLayout(new BorderLayout());
 		contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -95,12 +72,12 @@ public class Login extends JDialog {
 		gbl_contentPanel.columnWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
 		gbl_contentPanel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 
-		btnLogin = new JButton("Login");
+		btnLogin = new JButton("Register");
 		
 		contentPanel.setLayout(gbl_contentPanel);
 		{
 			{
-				JLabel lblUsername = new JLabel("ID");
+				JLabel lblUsername = new JLabel("Client ID");
 				GridBagConstraints gbc_lblUsername = new GridBagConstraints();
 				gbc_lblUsername.anchor = GridBagConstraints.EAST;
 				gbc_lblUsername.insets = new Insets(0, 0, 5, 5);
@@ -118,11 +95,9 @@ public class Login extends JDialog {
 				gbc_ID.gridy = 0;
 				contentPanel.add(ID, gbc_ID);
 				ID.setColumns(10);
-				
-				if (oauth.getClientId()!= null) ID.setText(oauth.getClientId());
 			}
 			{
-				lblPassword = new JLabel("Password");
+				lblPassword = new JLabel("Username");
 				GridBagConstraints gbc_lblPassword = new GridBagConstraints();
 				gbc_lblPassword.anchor = GridBagConstraints.EAST;
 				gbc_lblPassword.insets = new Insets(0, 0, 5, 5);
@@ -131,32 +106,35 @@ public class Login extends JDialog {
 				contentPanel.add(lblPassword, gbc_lblPassword);
 			}
 			{
-				PWD = new JPasswordField();
-				PWD.addKeyListener(new KeyAdapter() {
-					@Override
-					public void keyPressed(KeyEvent e) {
-						if (e.getKeyCode() == KeyEvent.VK_ENTER) submit();
-					}
-				});
-				GridBagConstraints gbc_PWD = new GridBagConstraints();
-				gbc_PWD.gridwidth = 2;
-				gbc_PWD.insets = new Insets(0, 0, 5, 0);
-				gbc_PWD.fill = GridBagConstraints.HORIZONTAL;
-				gbc_PWD.gridx = 1;
-				gbc_PWD.gridy = 1;
-				contentPanel.add(PWD, gbc_PWD);
-				
-				if (oauth.getClientSecret() != null) PWD.setText(oauth.getClientSecret());
+				USERNAME = new JTextField();
+				USERNAME.setColumns(10);
+				GridBagConstraints gbc_USERNAME = new GridBagConstraints();
+				gbc_USERNAME.gridwidth = 2;
+				gbc_USERNAME.insets = new Insets(0, 0, 5, 5);
+				gbc_USERNAME.fill = GridBagConstraints.HORIZONTAL;
+				gbc_USERNAME.gridx = 1;
+				gbc_USERNAME.gridy = 1;
+				contentPanel.add(USERNAME, gbc_USERNAME);
 			}
 			{
-				chckRemeberMe = new JCheckBox("Remember me");
-				chckRemeberMe.setSelected(true);
-				chckRemeberMe.setHorizontalAlignment(SwingConstants.RIGHT);
-				GridBagConstraints gbc_chckRemeberMe = new GridBagConstraints();
-				gbc_chckRemeberMe.insets = new Insets(0, 0, 5, 0);
-				gbc_chckRemeberMe.gridx = 2;
-				gbc_chckRemeberMe.gridy = 2;
-				contentPanel.add(chckRemeberMe, gbc_chckRemeberMe);
+				lblNewLabel = new JLabel("Initial access token");
+				GridBagConstraints gbc_lblNewLabel = new GridBagConstraints();
+				gbc_lblNewLabel.anchor = GridBagConstraints.EAST;
+				gbc_lblNewLabel.insets = new Insets(0, 0, 5, 5);
+				gbc_lblNewLabel.gridx = 0;
+				gbc_lblNewLabel.gridy = 2;
+				contentPanel.add(lblNewLabel, gbc_lblNewLabel);
+			}
+			{
+				TOKEN = new JTextField();
+				TOKEN.setColumns(10);
+				GridBagConstraints gbc_TOKEN = new GridBagConstraints();
+				gbc_TOKEN.gridwidth = 2;
+				gbc_TOKEN.insets = new Insets(0, 0, 5, 5);
+				gbc_TOKEN.fill = GridBagConstraints.HORIZONTAL;
+				gbc_TOKEN.gridx = 1;
+				gbc_TOKEN.gridy = 2;
+				contentPanel.add(TOKEN, gbc_TOKEN);
 			}
 			
 			{
@@ -179,22 +157,15 @@ public class Login extends JDialog {
 	private void submit() {
 		try {
 			sm = new ClientSecurityManager(oauth);
-			sm.setClientCredentials(ID.getText(), new String(PWD.getPassword()));
-
-			Response ret = sm.refreshToken();
-			if (ret.isError()) {
-				logger.error(ret);
-				m_listener.onLoginError((ErrorResponse) ret);
-				setTitle("Wrong credentials");
-				return;
+			Response ret = sm.registerClient(ID.getText(), USERNAME.getText(), TOKEN.getText());
+			if (ret.isRegistrationResponse()) {
+				RegistrationResponse cred = (RegistrationResponse) ret;
+				sm.setClientCredentials(cred.getClientId(), cred.getClientSecret());
+				sm.storeOAuthProperties();
 			}
-
-			if (chckRemeberMe.isSelected()) sm.storeOAuthProperties();
-			
-			m_listener.onLogin(ID.getText());//, new String(PWD.getPassword()),chckRemeberMe.isSelected());
 		} catch (SEPASecurityException | SEPAPropertiesException e1) {
 			logger.error(e1.getMessage());
-			m_listener.onLoginError(new ErrorResponse(401, "not_authorized", e1.getMessage()));
+	        JOptionPane.showMessageDialog(null, e1.getMessage(), "Failed to register", JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
 	}

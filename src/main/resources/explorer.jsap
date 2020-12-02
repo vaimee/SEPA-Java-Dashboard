@@ -7,7 +7,7 @@
 		"owl": "http://www.w3.org/2002/07/owl#"
 	},
 	"updates": {
-		"INSERT_DATA_URI": {
+		"___DASHBOARD_INSERT_DATA_URI": {
 			"sparql": "INSERT DATA {GRAPH ?graph {?subject ?predicate ?object}}",
 			"forcedBindings": {
 				"graph": {
@@ -24,7 +24,7 @@
 				}
 			}
 		},
-		"INSERT_DATA_LITERAL": {
+		"___DASHBOARD_INSERT_DATA_LITERAL": {
 			"sparql": "INSERT DATA {GRAPH ?graph {?subject ?predicate ?object}}",
 			"forcedBindings": {
 				"graph": {
@@ -41,7 +41,7 @@
 				}
 			}
 		},
-		"UPDATE_LITERAL": {
+		"___DASHBOARD_UPDATE_LITERAL": {
 			"sparql": "WITH ?graph DELETE {?subject ?predicate ?old} INSERT {?subject ?predicate ?object} WHERE {?subject ?predicate ?old}",
 			"forcedBindings": {
 				"graph": {
@@ -58,7 +58,7 @@
 				}
 			}
 		},
-		"UPDATE_URI": {
+		"___DASHBOARD_UPDATE_URI": {
 			"sparql": "WITH ?graph DELETE {?subject ?predicate ?old} INSERT {?subject ?predicate ?object} WHERE {?subject ?predicate ?old}",
 			"forcedBindings": {
 				"graph": {
@@ -75,7 +75,7 @@
 				}
 			}
 		},
-		"DROP_GRAPH": {
+		"___DASHBOARD_DROP_GRAPH": {
 			"sparql": "DROP SILENT GRAPH ?graph",
 			"forcedBindings": {
 				"graph": {
@@ -85,7 +85,7 @@
 		}
 	},
 	"queries": {
-		"CLASSES": {
+		"___DASHBOARD_CLASSES": {
 			"sparql": "SELECT DISTINCT ?class ?label FROM ?graph WHERE {{?s rdf:type ?class} UNION {?class rdf:type owl:Class} . OPTIONAL {?class rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
@@ -94,7 +94,7 @@
 				}
 			}
 		},
-		"TOP_CLASSES": {
+		"___DASHBOARD_TOP_CLASSES": {
 			"sparql": "SELECT DISTINCT ?class ?label FROM ?graph WHERE {{?s rdf:type ?class} UNION {?class rdf:type owl:Class} . OPTIONAL {?class rdfs:label ?label} FILTER NOT EXISTS{?class rdfs:subClassOf ?top} }",
 			"forcedBindings": {
 				"graph": {
@@ -103,7 +103,7 @@
 				}
 			}
 		},
-		"SUB_CLASSES": {
+		"___DASHBOARD_SUB_CLASSES": {
 			"sparql": "SELECT DISTINCT ?class ?label FROM ?graph WHERE {?class rdfs:subClassOf ?top . OPTIONAL {?class rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
@@ -116,7 +116,7 @@
 				}
 			}
 		},
-		"INDIVIDUALS": {
+		"___DASHBOARD_INDIVIDUALS": {
 			"sparql": "SELECT DISTINCT ?instance ?label FROM ?graph WHERE {?instance rdf:type ?class . OPTIONAL {?instance rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
@@ -129,7 +129,7 @@
 				}
 			}
 		},
-		"URI_GRAPH": {
+		"___DASHBOARD_URI_GRAPH": {
 			"sparql": "SELECT ?predicate ?label ?object FROM ?graph WHERE {?subject ?predicate ?object . OPTIONAL {?predicate rdfs:label ?label}}",
 			"forcedBindings": {
 				"graph": {
@@ -142,7 +142,7 @@
 				}
 			}
 		},
-		"GRAPHS": {
+		"___DASHBOARD_GRAPHS": {
 			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {GRAPH ?graph {?s ?p ?o}} GROUP BY ?graph"
 		}
 	}
