@@ -160,8 +160,8 @@ public class Register extends JDialog {
 			Response ret = sm.registerClient(ID.getText(), USERNAME.getText(), TOKEN.getText());
 			if (ret.isRegistrationResponse()) {
 				RegistrationResponse cred = (RegistrationResponse) ret;
-				sm.setClientCredentials(cred.getClientId(), cred.getClientSecret());
-				sm.storeOAuthProperties();
+				oauth.setCredentials(cred.getClientId(), cred.getClientSecret());
+				oauth.storeProperties();
 			}
 		} catch (SEPASecurityException | SEPAPropertiesException e1) {
 			logger.error(e1.getMessage());

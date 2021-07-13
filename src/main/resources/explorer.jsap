@@ -22,6 +22,10 @@
 				"predicate": {
 					"type": "uri"
 				}
+			},
+			"graphs": {
+				"using-graph-uri": [],
+				"using-named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_INSERT_DATA_LITERAL": {
@@ -39,6 +43,10 @@
 				"predicate": {
 					"type": "uri"
 				}
+			},
+			"graphs": {
+				"using-graph-uri": [],
+				"using-named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_UPDATE_LITERAL": {
@@ -56,6 +64,10 @@
 				"predicate": {
 					"type": "uri"
 				}
+			},
+			"graphs": {
+				"using-graph-uri": [],
+				"using-named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_UPDATE_URI": {
@@ -73,6 +85,10 @@
 				"predicate": {
 					"type": "uri"
 				}
+			},
+			"graphs": {
+				"using-graph-uri": [],
+				"using-named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_DROP_GRAPH": {
@@ -81,6 +97,10 @@
 				"graph": {
 					"type": "uri"
 				}
+			},
+			"graphs": {
+				"using-graph-uri": [],
+				"using-named-graph-uri": []
 			}
 		}
 	},
@@ -90,8 +110,12 @@
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
-					"value" : "http://localhost:8890/DAV"
+					"value": "http://localhost:8890/DAV"
 				}
+			},
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_TOP_CLASSES": {
@@ -99,8 +123,12 @@
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
-					"value" : "http://localhost:8890/DAV"
+					"value": "http://localhost:8890/DAV"
 				}
+			},
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_SUB_CLASSES": {
@@ -108,12 +136,16 @@
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
-					"value" : "http://www.w3.org/2002/07/owl#"
+					"value": "http://www.w3.org/2002/07/owl#"
 				},
 				"top": {
 					"type": "uri",
-					"value" : "rdfs:Class"
+					"value": "rdfs:Class"
 				}
+			},
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_INDIVIDUALS": {
@@ -121,12 +153,16 @@
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
-					"value" : "http://localhost:8890/DAV"
+					"value": "http://localhost:8890/DAV"
 				},
 				"class": {
 					"type": "uri",
-					"value" : "http://qudt.org/schema/qudt#TimeUnit"
+					"value": "http://qudt.org/schema/qudt#TimeUnit"
 				}
+			},
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_URI_GRAPH": {
@@ -134,16 +170,24 @@
 			"forcedBindings": {
 				"graph": {
 					"type": "uri",
-					"value" : "http://localhost:8890/DAV"
+					"value": "http://localhost:8890/DAV"
 				},
 				"subject": {
 					"type": "uri",
-					"value" : "http://qudt.org/vocab/unit#Hour"
+					"value": "http://qudt.org/vocab/unit#Hour"
 				}
+			},
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
 			}
 		},
 		"___DASHBOARD_GRAPHS": {
-			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {GRAPH ?graph {?s ?p ?o}} GROUP BY ?graph"
+			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {GRAPH ?graph {?s ?p ?o}} GROUP BY ?graph",
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
+			}
 		}
 	}
 }

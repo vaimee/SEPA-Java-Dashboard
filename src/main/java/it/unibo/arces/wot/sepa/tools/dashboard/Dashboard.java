@@ -28,10 +28,12 @@ import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
@@ -87,7 +89,8 @@ import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAProtocolException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
-import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.HTTPMethod;
+import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.QueryHTTPMethod;
+import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.UpdateHTTPMethod;
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
 import it.unibo.arces.wot.sepa.commons.response.Notification;
 import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
@@ -112,6 +115,7 @@ import javax.swing.border.LineBorder;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import java.awt.Panel;
+import java.awt.Rectangle;
 
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -133,7 +137,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
-import javax.swing.border.EmptyBorder;
+import java.awt.event.ItemListener;
+import java.awt.event.ItemEvent;
 
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
@@ -148,7 +153,7 @@ public class Dashboard implements LoginListener {
 	private Properties appProperties = new Properties();
 	private OAuthProperties oauth = null;
 	private ClientSecurityManager sm;
-	
+
 	private DefaultTableModel namespacesDM;
 	private String namespacesHeader[] = new String[] { "Prefix", "URI" };
 
@@ -163,7 +168,7 @@ public class Dashboard implements LoginListener {
 	private SortedListModel updateListDM = new SortedListModel();
 	private SortedListModel queryListDM = new SortedListModel();
 	private SortedListModel jsapListDM = new SortedListModel();
-	
+
 	private HashMap<String, JPanel> subscriptions = new HashMap<String, JPanel>();
 	private HashMap<String, BindingsTableModel> subscriptionResultsDM = new HashMap<String, BindingsTableModel>();
 	private HashMap<String, JLabel> subscriptionResultsLabels = new HashMap<String, JLabel>();
@@ -190,7 +195,7 @@ public class Dashboard implements LoginListener {
 	private JLabel namedGraphURI;
 	private JLabel subscribeURL;
 	private JLabel queryURL;
-	
+
 	private JButton updateButton;
 	private JButton subscribeButton;
 
@@ -199,8 +204,7 @@ public class Dashboard implements LoginListener {
 
 	private JList<String> queryList;
 	private JList<String> updateList;
-	private JList<String> jsapList;
-	
+
 	private JTabbedPane mainTabs;
 	private JTextField timeout;
 
@@ -228,8 +232,7 @@ public class Dashboard implements LoginListener {
 	private JCheckBox chckbxDatatype;
 	private JCheckBox chckbxQname;
 	private JLabel graphsEndpointLabel;
-	private JScrollPane scrollPane_6;
-	
+
 	private boolean signedIn = false;
 	private JTextField nRetry;
 
@@ -272,38 +275,10 @@ public class Dashboard implements LoginListener {
 		@Override
 		public void onError(ErrorResponse errorResponse) {
 			logger.error(errorResponse);
-
-//			// REFRESH TOKEN FROM SUBSCRIPTION
-//			if (appProfile.isSecure() && errorResponse.isTokenExpiredError()) {
-//				try {
-//					Response ret = sm.refreshToken();
-//					logger.debug(ret);
-//				} catch (SEPAPropertiesException | SEPASecurityException e) {
-//					logger.error(e.getMessage());
-//					if (logger.isTraceEnabled())
-//						e.printStackTrace();
-//					return;
-//				}
-//
-//				try {
-//					if (subOp.equals(SUB_OP.SUB))
-//						subscribe();
-//					else if (subOp.equals(SUB_OP.UNSUB))
-//						sepaClient.unsubscribe(unsubSpuid, Integer.parseInt(timeout.getText()));
-//
-//				} catch (NumberFormatException | IOException | SEPAPropertiesException | SEPAProtocolException
-//						| SEPASecurityException | SEPABindingsException e) {
-//					logger.error(e.getMessage());
-//					if (logger.isTraceEnabled())
-//						e.printStackTrace();
-//				}
-//			}
 		}
 
 		@Override
 		public void onSubscribe(String spuid, String alias) {
-//			subOp = SUB_OP.NONE;
-
 			// Subscription panel
 			JPanel sub = new JPanel();
 
@@ -1123,7 +1098,7 @@ public class Dashboard implements LoginListener {
 	 * 
 	 * @throws SEPAPropertiesException
 	 * @throws SEPASecurityException
-	 * @throws URISyntaxException 
+	 * @throws URISyntaxException
 	 * 
 	 * @throws BadPaddingException
 	 * @throws IllegalBlockSizeException
@@ -1142,16 +1117,14 @@ public class Dashboard implements LoginListener {
 
 	private void loadDashboardProperties() throws IOException {
 		FileInputStream in = new FileInputStream("dashboard.properties");
-		appProperties.load(in);	
+		appProperties.load(in);
 	}
-	
+
 	protected boolean loadSAP(String file, boolean load) {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
-		
-		
-		
+
 		updateForcedBindingsDM.clearBindings();
 		subscribeForcedBindingsDM.clearBindings();
 
@@ -1174,12 +1147,11 @@ public class Dashboard implements LoginListener {
 
 		updateButton.setEnabled(false);
 		subscribeButton.setEnabled(false);
-		
+
 		if (file == null) {
 			try {
 				loadDashboardProperties();
-			}
-			catch(IOException e) {
+			} catch (IOException e) {
 				logger.warn(e.getMessage());
 				try {
 					return onLoadJSAPButton();
@@ -1196,19 +1168,17 @@ public class Dashboard implements LoginListener {
 				logger.error("Path in dashboard.properties is null");
 				return false;
 			}
-			
+
 			String[] jsaps = path.split(",");
 			jsapListDM.clear();
-			
+
 			for (int i = 0; i < jsaps.length; i++) {
 				jsapFiles.add(jsaps[i]);
 				jsapListDM.add(jsaps[i]);
 			}
-			
-			
+
 			try {
 				appProfile = new JSAP(jsapFiles.get(0));
-//				appProfile = new JSAP(dashboardJsapUrl.getPath());
 			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
@@ -1226,28 +1196,26 @@ public class Dashboard implements LoginListener {
 		} else {
 			try {
 				loadDashboardProperties();
-			}
-			catch(IOException e) {
+			} catch (IOException e) {
 				logger.warn(e.getMessage());
 			}
 			try {
-				
+
 				if (load) {
-					// appProfile = new JSAP(dashboardJsapUrl.getPath());
 					appProfile = new JSAP(file);
 					appProfile.read(file, true);
 
 					jsapFiles.clear();
 					jsapFiles.add(file);
-					
+
 					jsapListDM.clear();
 					jsapListDM.add(file);
-					
+
 				} else if (appProfile != null) {
 					appProfile.read(file, true);
 					jsapFiles.add(file);
 					jsapListDM.add(file);
-				}			
+				}
 			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
@@ -1255,21 +1223,26 @@ public class Dashboard implements LoginListener {
 		}
 
 		// Add explorer JSAP
-		String dashboardJsapUrl;
+//		String dashboardJsapUrl;
+//		try {
+//			dashboardJsapUrl = Dashboard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+//		} catch (URISyntaxException e2) {
+//			logger.error(e2.getMessage());
+//			return false;
+//		}
+//
+//		
+//		
+//		if (dashboardJsapUrl == null) {
+//			JOptionPane.showMessageDialog(null, "File explorer.jsap not found",
+//					"Warning: Dashboard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath() is null",
+//					JOptionPane.INFORMATION_MESSAGE);
+//			return false;
+//		}
+
 		try {
-			dashboardJsapUrl = Dashboard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-		} catch (URISyntaxException e2) {
-			logger.error(e2.getMessage());
-			return false;
-		}
-		
-		if (dashboardJsapUrl == null) {
-			JOptionPane.showMessageDialog(null, "File explorer.jsap not found", "Warning: Dashboard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath() is null",
-				JOptionPane.INFORMATION_MESSAGE);
-			return false;
-		}
-		try {
-			appProfile.read(dashboardJsapUrl+"explorer.jsap");
+			appProfile.read(getClass().getClassLoader().getResourceAsStream("explorer.jsap"));
+			// appProfile.read(dashboardJsapUrl + "explorer.jsap");
 		} catch (SEPAPropertiesException | SEPASecurityException e2) {
 			logger.error(e2.getMessage());
 			return false;
@@ -1285,13 +1258,15 @@ public class Dashboard implements LoginListener {
 
 		// Loading updates
 		for (String update : appProfile.getUpdateIds()) {
-			if (update.startsWith("___DASHBOARD_")) continue;
+			if (update.startsWith("___DASHBOARD_"))
+				continue;
 			updateListDM.add(update);
 		}
 
 		// Loading subscribes
 		for (String subscribe : appProfile.getQueryIds()) {
-			if (subscribe.startsWith("___DASHBOARD_")) continue;
+			if (subscribe.startsWith("___DASHBOARD_"))
+				continue;
 			queryListDM.add(subscribe);
 		}
 
@@ -1303,8 +1278,8 @@ public class Dashboard implements LoginListener {
 //				logger.error(e1.getMessage());
 //				return false;
 //			}
-			
-			login = new Login(appProfile.getAuthenticationProperties(), this, frmSepaDashboard);//,clientIDString,clientSecretString);
+
+			login = new Login(appProfile.getAuthenticationProperties(), this, frmSepaDashboard);// ,clientIDString,clientSecretString);
 			login.setVisible(true);
 		} else {
 
@@ -1376,47 +1351,60 @@ public class Dashboard implements LoginListener {
 		frmSepaDashboard.setBounds(100, 100, 925, 768);
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
-		gridBagLayout.columnWidths = new int[] { 812, 925, 0 };
-		gridBagLayout.rowHeights = new int[] { 0, 642, 129, 39, 0 };
-		gridBagLayout.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
+		gridBagLayout.columnWidths = new int[] { 465, 0 };
+		gridBagLayout.rowHeights = new int[] { 0, 391, -36, 97, 0 };
+		gridBagLayout.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gridBagLayout.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
 		frmSepaDashboard.getContentPane().setLayout(gridBagLayout);
-		
+
+		JPanel panel_8 = new JPanel();
+		GridBagConstraints gbc_panel_8 = new GridBagConstraints();
+		gbc_panel_8.insets = new Insets(0, 0, 5, 0);
+		gbc_panel_8.fill = GridBagConstraints.BOTH;
+		gbc_panel_8.gridx = 0;
+		gbc_panel_8.gridy = 0;
+		frmSepaDashboard.getContentPane().add(panel_8, gbc_panel_8);
+		GridBagLayout gbl_panel_8 = new GridBagLayout();
+		gbl_panel_8.columnWidths = new int[] { 0, 0, 0, 0, 0 };
+		gbl_panel_8.rowHeights = new int[] { 0, 0 };
+		gbl_panel_8.columnWeights = new double[] { 0.0, 0.0, 1.0, 0.0, Double.MIN_VALUE };
+		gbl_panel_8.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
+		panel_8.setLayout(gbl_panel_8);
+
+		JButton btnLoadXmlProfile = new JButton("Load JSAP");
+		GridBagConstraints gbc_btnLoadXmlProfile = new GridBagConstraints();
+		gbc_btnLoadXmlProfile.insets = new Insets(0, 0, 0, 5);
+		gbc_btnLoadXmlProfile.anchor = GridBagConstraints.WEST;
+		gbc_btnLoadXmlProfile.gridx = 0;
+		gbc_btnLoadXmlProfile.gridy = 0;
+		panel_8.add(btnLoadXmlProfile, gbc_btnLoadXmlProfile);
+		btnLoadXmlProfile.setFont(new Font("Montserrat", Font.BOLD, 13));
+		btnLoadXmlProfile.setForeground(Color.BLACK);
+		btnLoadXmlProfile.setBackground(Color.WHITE);
+
+		chckbxMerge = new JCheckBox("merge");
+		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
+		gbc_chckbxMerge.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxMerge.gridx = 1;
+		gbc_chckbxMerge.gridy = 0;
+		panel_8.add(chckbxMerge, gbc_chckbxMerge);
+		chckbxMerge.setFont(new Font("Montserrat", Font.PLAIN, 11));
+
 		JButton btnNewButton_2 = new JButton("Register");
-		btnNewButton_2.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if (signedIn) return;
-				
-				try {
-					oauth = new OAuthProperties(appProfile.getFileName());
-				} catch (SEPAPropertiesException | SEPASecurityException e1) {
-					logger.error(e1.getMessage());
-					return;
-				}
-				String clientId =  oauth.getClientRegistrationId();
-				String username =  oauth.getUsername();
-				String token = oauth.getInitialAccessToken();;
-				
-				Register dialog = new Register(oauth, frmSepaDashboard,(clientId != null ? clientId : ""),(username != null ? username : ""),(token != null ? token : ""));
-				dialog.setVisible(true);
-			}
-		});
 		GridBagConstraints gbc_btnNewButton_2 = new GridBagConstraints();
-		gbc_btnNewButton_2.anchor = GridBagConstraints.WEST;
-		gbc_btnNewButton_2.insets = new Insets(0, 0, 5, 5);
-		gbc_btnNewButton_2.gridx = 0;
+		gbc_btnNewButton_2.anchor = GridBagConstraints.EAST;
+		gbc_btnNewButton_2.insets = new Insets(0, 0, 0, 5);
+		gbc_btnNewButton_2.gridx = 2;
 		gbc_btnNewButton_2.gridy = 0;
-		frmSepaDashboard.getContentPane().add(btnNewButton_2, gbc_btnNewButton_2);
+		panel_8.add(btnNewButton_2, gbc_btnNewButton_2);
 
 		btnLogin = new JButton("Sign In");
-		btnLogin.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_btnLogin = new GridBagConstraints();
 		gbc_btnLogin.anchor = GridBagConstraints.EAST;
-		gbc_btnLogin.insets = new Insets(2, 0, 5, 2);
-		gbc_btnLogin.gridx = 1;
+		gbc_btnLogin.gridx = 3;
 		gbc_btnLogin.gridy = 0;
-		frmSepaDashboard.getContentPane().add(btnLogin, gbc_btnLogin);
+		panel_8.add(btnLogin, gbc_btnLogin);
+		btnLogin.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnLogin.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -1430,12 +1418,43 @@ public class Dashboard implements LoginListener {
 				}
 			}
 		});
+		btnNewButton_2.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (signedIn)
+					return;
+
+				try {
+					oauth = new OAuthProperties(appProfile.getFileName());
+				} catch (SEPAPropertiesException | SEPASecurityException e1) {
+					logger.error(e1.getMessage());
+					return;
+				}
+				String clientId = oauth.getClientRegistrationId();
+				String username = oauth.getUsername();
+				String token = oauth.getInitialAccessToken();
+				;
+
+				Register dialog = new Register(oauth, frmSepaDashboard, (clientId != null ? clientId : ""),
+						(username != null ? username : ""), (token != null ? token : ""));
+				dialog.setVisible(true);
+			}
+		});
+
+		btnLoadXmlProfile.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					onLoadJSAPButton();
+				} catch (SEPASecurityException | URISyntaxException e1) {
+					logger.error(e1.getMessage());
+				}
+			}
+		});
 		// btnLogin.setEnabled(false);
 
 		mainTabs = new JTabbedPane(JTabbedPane.TOP);
 		mainTabs.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		GridBagConstraints gbc_mainTabs = new GridBagConstraints();
-		gbc_mainTabs.gridwidth = 2;
 		gbc_mainTabs.insets = new Insets(0, 0, 5, 0);
 		gbc_mainTabs.fill = GridBagConstraints.BOTH;
 		gbc_mainTabs.gridx = 0;
@@ -1446,8 +1465,8 @@ public class Dashboard implements LoginListener {
 		mainTabs.addTab("SPARQL", null, sparqlTab, null);
 		mainTabs.setEnabledAt(0, true);
 		GridBagLayout gbl_sparqlTab = new GridBagLayout();
-		gbl_sparqlTab.columnWidths = new int[] { 233, 0, 0 };
-		gbl_sparqlTab.rowHeights = new int[] { 0, 87, 274, 29, 289, 0 };
+		gbl_sparqlTab.columnWidths = new int[] { 420, 0, 0 };
+		gbl_sparqlTab.rowHeights = new int[] { 0, 87, 91, 29, 188, 0 };
 		gbl_sparqlTab.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
 		gbl_sparqlTab.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 1.0, Double.MIN_VALUE };
 		sparqlTab.setLayout(gbl_sparqlTab);
@@ -1814,9 +1833,9 @@ public class Dashboard implements LoginListener {
 		gbc_panel_6.gridy = 3;
 		sparqlTab.add(panel_6, gbc_panel_6);
 		GridBagLayout gbl_panel_6 = new GridBagLayout();
-		gbl_panel_6.columnWidths = new int[] { 0, 120, 57, 0, 0 };
+		gbl_panel_6.columnWidths = new int[] { 0, 137, 0, 55, 45, 34, 0 };
 		gbl_panel_6.rowHeights = new int[] { 28, 0 };
-		gbl_panel_6.columnWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panel_6.columnWeights = new double[] { 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, Double.MIN_VALUE };
 		gbl_panel_6.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		panel_6.setLayout(gbl_panel_6);
 
@@ -1839,13 +1858,50 @@ public class Dashboard implements LoginListener {
 		updateInfo = new JLabel("---");
 		updateInfo.setFont(new Font("Montserrat", Font.BOLD, 11));
 		GridBagConstraints gbc_udpdateInfo = new GridBagConstraints();
-		gbc_udpdateInfo.gridwidth = 3;
-		gbc_udpdateInfo.fill = GridBagConstraints.VERTICAL;
 		gbc_udpdateInfo.insets = new Insets(0, 0, 0, 5);
+		gbc_udpdateInfo.fill = GridBagConstraints.VERTICAL;
 		gbc_udpdateInfo.anchor = GridBagConstraints.WEST;
 		gbc_udpdateInfo.gridx = 1;
 		gbc_udpdateInfo.gridy = 0;
 		panel_6.add(updateInfo, gbc_udpdateInfo);
+
+		JLabel lblToms = new JLabel("Timeout (ms)");
+		GridBagConstraints gbc_lblToms = new GridBagConstraints();
+		gbc_lblToms.insets = new Insets(0, 0, 0, 5);
+		gbc_lblToms.gridx = 2;
+		gbc_lblToms.gridy = 0;
+		panel_6.add(lblToms, gbc_lblToms);
+		lblToms.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		lblToms.setForeground(Color.BLACK);
+
+		timeout = new JTextField();
+		GridBagConstraints gbc_timeout = new GridBagConstraints();
+		gbc_timeout.fill = GridBagConstraints.HORIZONTAL;
+		gbc_timeout.insets = new Insets(0, 0, 0, 5);
+		gbc_timeout.gridx = 3;
+		gbc_timeout.gridy = 0;
+		panel_6.add(timeout, gbc_timeout);
+		timeout.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		timeout.setText("5000");
+		timeout.setColumns(10);
+
+		JLabel lblNewLabel_2 = new JLabel("Retry");
+		GridBagConstraints gbc_lblNewLabel_2 = new GridBagConstraints();
+		gbc_lblNewLabel_2.insets = new Insets(0, 0, 0, 5);
+		gbc_lblNewLabel_2.gridx = 4;
+		gbc_lblNewLabel_2.gridy = 0;
+		panel_6.add(lblNewLabel_2, gbc_lblNewLabel_2);
+		lblNewLabel_2.setFont(new Font("Montserrat", Font.PLAIN, 11));
+
+		nRetry = new JTextField();
+		GridBagConstraints gbc_nRetry = new GridBagConstraints();
+		gbc_nRetry.fill = GridBagConstraints.HORIZONTAL;
+		gbc_nRetry.gridx = 5;
+		gbc_nRetry.gridy = 0;
+		panel_6.add(nRetry, gbc_nRetry);
+		nRetry.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		nRetry.setText("0");
+		nRetry.setColumns(10);
 
 		JPanel panel_7 = new JPanel();
 		GridBagConstraints gbc_panel_7 = new GridBagConstraints();
@@ -1988,29 +2044,29 @@ public class Dashboard implements LoginListener {
 				int[] rows = graphsTable.getSelectedRows();
 				if (rows.length > 0) {
 					int dialogResult = JOptionPane.showConfirmDialog(null,
-							"Are you sure? " + graphs.getValueAt(rows[0], 0).toString() + " will be deleted!", "Warning",
-							JOptionPane.YES_NO_OPTION);
+							"Are you sure? " + graphs.getValueAt(rows[0], 0).toString() + " will be deleted!",
+							"Warning", JOptionPane.YES_NO_OPTION);
 					if (dialogResult == JOptionPane.YES_OPTION) {
 //						for (int i : rows) {
-							Bindings forced = new Bindings();
-							forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(rows[0], 0).toString()));
-							try {
-								if (sepaClient == null) {
-									JOptionPane.showMessageDialog(null, "You need to sign in first",
-											"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-									return;
-								}
-								sepaClient.update("___DASHBOARD_DROP_GRAPH", forced, Integer.parseInt(timeout.getText()),
-										Integer.parseInt(nRetry.getText()));
-							} catch (SEPAProtocolException | SEPASecurityException | IOException
-									| SEPAPropertiesException | SEPABindingsException e1) {
-								logger.error(e1.getMessage());
-								if (logger.isTraceEnabled())
-									e1.printStackTrace();
+						Bindings forced = new Bindings();
+						forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(rows[0], 0).toString()));
+						try {
+							if (sepaClient == null) {
+								JOptionPane.showMessageDialog(null, "You need to sign in first",
+										"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
+								return;
 							}
+							sepaClient.update("___DASHBOARD_DROP_GRAPH", forced, Integer.parseInt(timeout.getText()),
+									Integer.parseInt(nRetry.getText()));
+						} catch (SEPAProtocolException | SEPASecurityException | IOException | SEPAPropertiesException
+								| SEPABindingsException e1) {
+							logger.error(e1.getMessage());
+							if (logger.isTraceEnabled())
+								e1.printStackTrace();
 						}
+					}
 
-						onExplorerOpenTab(true);
+					onExplorerOpenTab(true);
 //					}
 				}
 			}
@@ -2222,20 +2278,20 @@ public class Dashboard implements LoginListener {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("___DASHBOARD_UPDATE_LITERAL", forcedBindings, Integer.parseInt(timeout.getText()),
-								Integer.parseInt(nRetry.getText()));
+						ret = sepaClient.update("___DASHBOARD_UPDATE_LITERAL", forcedBindings,
+								Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 					} else if (type.equals("URI") || type.equals("BNODE")) {
 						object = new RDFTermURI(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("___DASHBOARD_UPDATE_URI", forcedBindings, Integer.parseInt(timeout.getText()),
-								Integer.parseInt(nRetry.getText()));
+						ret = sepaClient.update("___DASHBOARD_UPDATE_URI", forcedBindings,
+								Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 					} else {
 						object = new RDFTermLiteral(
 								(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1), type);
 						forcedBindings.addBinding("object", object);
-						ret = sepaClient.update("___DASHBOARD_UPDATE_LITERAL", forcedBindings, Integer.parseInt(timeout.getText()),
-								Integer.parseInt(nRetry.getText()));
+						ret = sepaClient.update("___DASHBOARD_UPDATE_LITERAL", forcedBindings,
+								Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 					}
 
 					if (ret.isError())
@@ -2252,102 +2308,61 @@ public class Dashboard implements LoginListener {
 
 		scrollPane_8.setViewportView(tableInstanceProperties);
 
-		JScrollPane scrollPane_5 = new JScrollPane();
-		GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
-		gbc_scrollPane_5.gridwidth = 2;
-		gbc_scrollPane_5.anchor = GridBagConstraints.SOUTH;
-		gbc_scrollPane_5.fill = GridBagConstraints.BOTH;
-		gbc_scrollPane_5.insets = new Insets(5, 10, 5, 10);
-		gbc_scrollPane_5.gridx = 0;
-		gbc_scrollPane_5.gridy = 2;
-		frmSepaDashboard.getContentPane().add(scrollPane_5, gbc_scrollPane_5);
+		JPanel panel_9 = new JPanel();
+		GridBagConstraints gbc_panel_9 = new GridBagConstraints();
+		gbc_panel_9.anchor = GridBagConstraints.NORTH;
+		gbc_panel_9.insets = new Insets(0, 0, 5, 0);
+		gbc_panel_9.fill = GridBagConstraints.HORIZONTAL;
+		gbc_panel_9.gridx = 0;
+		gbc_panel_9.gridy = 2;
+		frmSepaDashboard.getContentPane().add(panel_9, gbc_panel_9);
+		GridBagLayout gbl_panel_9 = new GridBagLayout();
+		gbl_panel_9.columnWidths = new int[] { 0, 0, 0, 56, 59, 0, 0 };
+		gbl_panel_9.rowHeights = new int[] { 0, 0 };
+		gbl_panel_9.columnWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panel_9.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
+		panel_9.setLayout(gbl_panel_9);
 
-		textArea = new JTextArea();
-		textArea.setFont(new Font("Montserrat", Font.PLAIN, 10));
-		textArea.setLineWrap(true);
-		scrollPane_5.setViewportView(textArea);
-		TextAreaAppender appender = new TextAreaAppender(textArea);
-		TextAreaAppender.addAppender(appender, "TextArea");
-
-		JPanel infoPanel = new JPanel();
-		GridBagConstraints gbc_infoPanel = new GridBagConstraints();
-		gbc_infoPanel.insets = new Insets(2, 0, 2, 0);
-		gbc_infoPanel.gridwidth = 2;
-		gbc_infoPanel.fill = GridBagConstraints.HORIZONTAL;
-		gbc_infoPanel.gridx = 0;
-		gbc_infoPanel.gridy = 3;
-		frmSepaDashboard.getContentPane().add(infoPanel, gbc_infoPanel);
-		GridBagLayout gbl_infoPanel = new GridBagLayout();
-		gbl_infoPanel.columnWidths = new int[] { 104, 0, 88, 0, 0, 0, 0, 0, 97, 76, 0 };
-		gbl_infoPanel.rowHeights = new int[] { 29, 0, 0 };
-		gbl_infoPanel.columnWeights = new double[] { 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-				Double.MIN_VALUE };
-		gbl_infoPanel.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-		infoPanel.setLayout(gbl_infoPanel);
-		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
+		JButton btnClean = new JButton("Clear log");
+		GridBagConstraints gbc_btnClean = new GridBagConstraints();
+		gbc_btnClean.anchor = GridBagConstraints.SOUTHWEST;
+		gbc_btnClean.insets = new Insets(0, 0, 0, 5);
+		gbc_btnClean.gridx = 1;
+		gbc_btnClean.gridy = 0;
+		panel_9.add(btnClean, gbc_btnClean);
+		btnClean.setFont(new Font("Montserrat", Font.BOLD, 13));
+		btnClean.setForeground(Color.BLACK);
+		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
+		btnClean.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				textArea.setText("");
+				// clear();
+			}
+		});
 
 		chckbxDatatype = new JCheckBox("Datatype");
+		GridBagConstraints gbc_chckbxDatatype = new GridBagConstraints();
+		gbc_chckbxDatatype.anchor = GridBagConstraints.EAST;
+		gbc_chckbxDatatype.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxDatatype.gridx = 2;
+		gbc_chckbxDatatype.gridy = 0;
+		panel_9.add(chckbxDatatype, gbc_chckbxDatatype);
 		chckbxDatatype.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		chckbxDatatype.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				onDatatypeCheckbox(e);
 			}
 		});
-
-		JLabel lblToms = new JLabel("Timeout (ms)");
-		lblToms.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		GridBagConstraints gbc_lblToms = new GridBagConstraints();
-		gbc_lblToms.anchor = GridBagConstraints.EAST;
-		gbc_lblToms.insets = new Insets(0, 0, 5, 5);
-		gbc_lblToms.gridx = 2;
-		gbc_lblToms.gridy = 0;
-		infoPanel.add(lblToms, gbc_lblToms);
-		lblToms.setForeground(Color.BLACK);
-
-		timeout = new JTextField();
-		timeout.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		GridBagConstraints gbc_timeout = new GridBagConstraints();
-		gbc_timeout.fill = GridBagConstraints.HORIZONTAL;
-		gbc_timeout.insets = new Insets(0, 0, 5, 5);
-		gbc_timeout.gridx = 3;
-		gbc_timeout.gridy = 0;
-		infoPanel.add(timeout, gbc_timeout);
-		timeout.setText("5000");
-		timeout.setColumns(10);
-
-		JLabel lblNewLabel_2 = new JLabel("Retry");
-		lblNewLabel_2.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		GridBagConstraints gbc_lblNewLabel_2 = new GridBagConstraints();
-		gbc_lblNewLabel_2.anchor = GridBagConstraints.EAST;
-		gbc_lblNewLabel_2.insets = new Insets(0, 0, 5, 5);
-		gbc_lblNewLabel_2.gridx = 4;
-		gbc_lblNewLabel_2.gridy = 0;
-		infoPanel.add(lblNewLabel_2, gbc_lblNewLabel_2);
-
-		nRetry = new JTextField();
-		nRetry.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		nRetry.setText("0");
-		GridBagConstraints gbc_nRetry = new GridBagConstraints();
-		gbc_nRetry.fill = GridBagConstraints.HORIZONTAL;
-		gbc_nRetry.insets = new Insets(0, 0, 5, 5);
-		gbc_nRetry.gridx = 5;
-		gbc_nRetry.gridy = 0;
-		infoPanel.add(nRetry, gbc_nRetry);
-		nRetry.setColumns(10);
 		chckbxDatatype.setSelected(true);
-		GridBagConstraints gbc_chckbxDatatype = new GridBagConstraints();
-		gbc_chckbxDatatype.insets = new Insets(0, 0, 5, 5);
-		gbc_chckbxDatatype.gridx = 6;
-		gbc_chckbxDatatype.gridy = 0;
-		infoPanel.add(chckbxDatatype, gbc_chckbxDatatype);
 
 		chckbxQname = new JCheckBox("Qname");
-		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
-		gbc_chckbxQname.insets = new Insets(0, 0, 5, 5);
-		gbc_chckbxQname.gridx = 7;
+		gbc_chckbxQname.anchor = GridBagConstraints.EAST;
+		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxQname.gridx = 3;
 		gbc_chckbxQname.gridy = 0;
-		infoPanel.add(chckbxQname, gbc_chckbxQname);
+		panel_9.add(chckbxQname, gbc_chckbxQname);
+		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
 		chckbxQname.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				onQnameCheckbox(e);
@@ -2355,83 +2370,162 @@ public class Dashboard implements LoginListener {
 		});
 		chckbxQname.setSelected(true);
 
+		JButton btnNewButton_3 = new JButton("CSV");
+		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
+		gbc_btnNewButton_3.anchor = GridBagConstraints.SOUTHEAST;
+		gbc_btnNewButton_3.insets = new Insets(0, 0, 0, 5);
+		gbc_btnNewButton_3.gridx = 4;
+		gbc_btnNewButton_3.gridy = 0;
+		panel_9.add(btnNewButton_3, gbc_btnNewButton_3);
+		btnNewButton_3.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				onExportCSV();
+			}
+		});
+
 		JButton btnNewButton = new JButton("Clear results");
-		btnNewButton.setFont(new Font("Montserrat", Font.BOLD, 13));
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
-		gbc_btnNewButton.insets = new Insets(0, 0, 5, 5);
-		gbc_btnNewButton.gridx = 8;
+		gbc_btnNewButton.anchor = GridBagConstraints.SOUTHEAST;
+		gbc_btnNewButton.gridx = 5;
 		gbc_btnNewButton.gridy = 0;
-		infoPanel.add(btnNewButton, gbc_btnNewButton);
+		panel_9.add(btnNewButton, gbc_btnNewButton);
+		btnNewButton.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				clear();
 			}
 		});
 
-		JButton btnClean = new JButton("Clear log");
-		btnClean.setFont(new Font("Montserrat", Font.BOLD, 13));
-		btnClean.setForeground(Color.BLACK);
-		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
-		GridBagConstraints gbc_btnClean = new GridBagConstraints();
-		gbc_btnClean.insets = new Insets(0, 0, 5, 0);
-		gbc_btnClean.anchor = GridBagConstraints.NORTHWEST;
-		gbc_btnClean.gridx = 9;
-		gbc_btnClean.gridy = 0;
-		infoPanel.add(btnClean, gbc_btnClean);
-		
-				JButton btnLoadXmlProfile = new JButton("Load JSAP");
-				btnLoadXmlProfile.setFont(new Font("Montserrat", Font.BOLD, 13));
-				btnLoadXmlProfile.setForeground(Color.BLACK);
-				btnLoadXmlProfile.setBackground(Color.WHITE);
-				GridBagConstraints gbc_btnLoadXmlProfile = new GridBagConstraints();
-				gbc_btnLoadXmlProfile.anchor = GridBagConstraints.WEST;
-				gbc_btnLoadXmlProfile.insets = new Insets(0, 0, 0, 5);
-				gbc_btnLoadXmlProfile.gridx = 0;
-				gbc_btnLoadXmlProfile.gridy = 1;
-				infoPanel.add(btnLoadXmlProfile, gbc_btnLoadXmlProfile);
-				
-						chckbxMerge = new JCheckBox("merge");
-						chckbxMerge.setFont(new Font("Montserrat", Font.PLAIN, 11));
-						GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
-						gbc_chckbxMerge.anchor = GridBagConstraints.WEST;
-						gbc_chckbxMerge.insets = new Insets(0, 0, 0, 5);
-						gbc_chckbxMerge.gridx = 1;
-						gbc_chckbxMerge.gridy = 1;
-						infoPanel.add(chckbxMerge, gbc_chckbxMerge);
-						
-						 scrollPane_6 = new JScrollPane();
-						GridBagConstraints gbc_scrollPane_6 = new GridBagConstraints();
-						gbc_scrollPane_6.fill = GridBagConstraints.BOTH;
-						gbc_scrollPane_6.gridwidth = 8;
-						gbc_scrollPane_6.insets = new Insets(0, 0, 0, 5);
-						gbc_scrollPane_6.gridx = 2;
-						gbc_scrollPane_6.gridy = 1;
-						infoPanel.add(scrollPane_6, gbc_scrollPane_6);
-						
-						jsapList = new JList<String>();
-						jsapList.setFont(new Font("Montserrat", Font.PLAIN, 13));
-						jsapList.setBorder(new EmptyBorder(0, 0, 0, 0));
-						jsapList.setModel(jsapListDM);
-						jsapList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-						scrollPane_6.setViewportView(jsapList);	
-						
-						
-				btnLoadXmlProfile.addActionListener(new ActionListener() {
-					public void actionPerformed(ActionEvent e) {
-						try {
-							onLoadJSAPButton();
-						} catch (SEPASecurityException | URISyntaxException e1) {
-							logger.error(e1.getMessage());
-						}
-					}
-				});
-		btnClean.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				textArea.setText("");
-				// clear();
+		scrollPane_5 = new JScrollPane();
+		GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
+		gbc_scrollPane_5.fill = GridBagConstraints.BOTH;
+		gbc_scrollPane_5.gridx = 0;
+		gbc_scrollPane_5.gridy = 3;
+		frmSepaDashboard.getContentPane().add(scrollPane_5, gbc_scrollPane_5);
+
+		textArea = new JTextArea();
+		scrollPane_5.setViewportView(textArea);
+		textArea.setFont(new Font("Montserrat", Font.PLAIN, 10));
+		textArea.setLineWrap(true);
+		TextAreaAppender appender = new TextAreaAppender(textArea);
+		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
+		TextAreaAppender.addAppender(appender, "TextArea");
+
+		JCheckBox chckbxNewCheckBox = new JCheckBox("Hide console");
+		chckbxNewCheckBox.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (chckbxNewCheckBox.isSelected()) {
+					scrollPane_5.setVisible(false);
+					
+					Rectangle main = mainTabs.getBounds();
+					main.height += textArea.getHeight();
+					mainTabs.setBounds(main);
+					
+					Rectangle control = panel_9.getBounds();
+					control.y += textArea.getHeight();
+					panel_9.setBounds(control);
+					
+//					Rectangle top = panel_8.getBounds();
+//					Rectangle main = mainTabs.getBounds();
+//					Rectangle control = panel_9.getBounds();
+//					Rectangle info = scrollPane_5.getBounds();
+//					
+//					main.height += 20;
+//					//control.y = top.height + main.height;
+//					//info.y = top.height + main.height + control.height + info.height;
+//					info.height = 0;
+//					
+//					scrollPane_5.setBounds(info);
+//					mainTabs.setBounds(main);
+					//panel_9.setBounds(control);
+					//scrollPane_5.setBounds(info);
+					
+					//info.y += info.height;
+					//scrollPane_5.setBounds(info);
+					
+					//Rectangle control = panel_9.getBounds();
+					//control.y += info.height;
+					//panel_9.setBounds(control);
+					
+										
+					
+					//Rectangle info = textArea.getBounds();
+					
+//					int logH = info.height;
+//					
+//					b.height += logH;
+					
+					
+					//control.y += logH;
+					//info.y += logH;
+					//mainTabs.setBounds(b);
+					//panel_9.setBounds(control);
+					//scrollPane_9.setBounds(info);
+					//scrollPane_5.setVisible(false);
+					
+					//info.height = 0;
+					//info.y += 10;
+					//scrollPane_5.setBounds(info);
+					//b.y += 10;
+					//scrollPane_9.setBounds(b);
+					//scrollPane_5.setVisible(false);
+					
+					//Rectangle b = panel_9.getBounds();
+					//b.y += info.height;
+					//panel_9.setBounds(b);
+					// Rectangle b = infoPanel.getBounds();
+					// b.y += b.height;
+					// infoPanel.setBounds(b);
+					
+				} else {
+					scrollPane_5.setVisible(true);
+					
+					Rectangle main = mainTabs.getBounds();
+					main.height -= textArea.getHeight();
+					mainTabs.setBounds(main);
+					
+					Rectangle control = panel_9.getBounds();
+					control.y -= textArea.getHeight();
+					panel_9.setBounds(control);
+					
+//					Rectangle info = scrollPane_5.getBounds();
+//					info.y -= info.height;
+//					//scrollPane_5.setBounds(info);
+//					
+//					Rectangle control = panel_9.getBounds();
+//					control.y -= info.height;
+//					panel_9.setBounds(control);
+					
+					//Rectangle info = textArea.getBounds();
+					
+//					int logH = info.height;
+//					
+//					b.height += logH;
+					
+					
+					
+					// Rectangle b = infoPanel.getBounds();
+					// b.y -= b.height;
+					// infoPanel.setBounds(b);
+					//scrollPane_5.setVisible(true);
+				}
 			}
 		});
+		chckbxNewCheckBox.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+			}
+		});
+
+		GridBagConstraints gbc_chckbxNewCheckBox = new GridBagConstraints();
+		gbc_chckbxNewCheckBox.anchor = GridBagConstraints.WEST;
+		gbc_chckbxNewCheckBox.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxNewCheckBox.gridx = 0;
+		gbc_chckbxNewCheckBox.gridy = 0;
+		panel_9.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
 	}
+	
+	JScrollPane scrollPane_5;
 
 	protected void onQnameCheckbox(ChangeEvent e) {
 		bindingsRender.showAsQName(chckbxQname.isSelected());
@@ -2480,8 +2574,8 @@ public class Dashboard implements LoginListener {
 					return;
 				}
 
-				Response retResponse = sepaClient.query("___DASHBOARD_SUB_CLASSES", forced, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
+				Response retResponse = sepaClient.query("___DASHBOARD_SUB_CLASSES", forced,
+						Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -2672,8 +2766,8 @@ public class Dashboard implements LoginListener {
 				return;
 			}
 
-			Response retResponse = sepaClient.query("___DASHBOARD_TOP_CLASSES", forced, Integer.parseInt(timeout.getText()),
-					Integer.parseInt(nRetry.getText()));
+			Response retResponse = sepaClient.query("___DASHBOARD_TOP_CLASSES", forced,
+					Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -2730,6 +2824,54 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
+	protected void onExportCSV() {
+		String openIn = null;
+		final JFileChooser fc = new JFileChooser(openIn);
+		fc.setDialogTitle("Save CSV");
+		fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+
+		int returnVal = fc.showSaveDialog(frmSepaDashboard);
+		if (returnVal == JFileChooser.APPROVE_OPTION) {
+			String fileName = fc.getSelectedFile().getPath();
+
+			try {
+				File fout = new File(fileName);
+				FileOutputStream fos = new FileOutputStream(fout);
+				BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+
+				// Header
+				String lineString = null;
+				for (int col = 0; col < bindingsResultsTable.getColumnCount(); col++) {
+					String value = bindingsResultsTable.getColumnName(col);
+					if (lineString == null)
+						lineString = value;
+					else
+						lineString += "|" + value;
+				}
+				bw.write(lineString);
+				bw.newLine();
+
+				for (int row = 0; row < bindingsResultsTable.getRowCount(); row++) {
+					lineString = null;
+					for (int col = 0; col < bindingsResultsTable.getColumnCount(); col++) {
+						String value = (((BindingValue) bindingsResultsTable.getValueAt(row, col) == null ? ""
+								: ((BindingValue) bindingsResultsTable.getValueAt(row, col)).get()));
+						if (lineString == null)
+							lineString = value;
+						else
+							lineString += "|" + value;
+					}
+					bw.write(lineString);
+					bw.newLine();
+
+				}
+				bw.close();
+			} catch (Exception e3) {
+				logger.error(e3.getMessage());
+			}
+		}
+	}
+
 	protected boolean onLoadJSAPButton() throws SEPASecurityException, URISyntaxException {
 		String openIn = null;
 		if (appProperties.getProperty("appProfile") != null) {
@@ -2760,16 +2902,16 @@ public class Dashboard implements LoginListener {
 
 				appProperties = new Properties();
 				appProperties.put("appProfile", path);
-//				appProperties.put("jksName", jksName);
-//				appProperties.put("jksPass", jksPass);
+
+				logger.info("JSAP files: " + path);
 
 				return storeDashboardProperties();
 			}
 		}
-		
+
 		return false;
 	}
-	
+
 	private boolean storeDashboardProperties() {
 		try {
 			FileOutputStream out = new FileOutputStream("dashboard.properties");
@@ -2778,8 +2920,8 @@ public class Dashboard implements LoginListener {
 		} catch (IOException e3) {
 			logger.error(e3.getMessage());
 			return false;
-		}	
-		
+		}
+
 		return true;
 	}
 
@@ -2984,11 +3126,9 @@ public class Dashboard implements LoginListener {
 			port = ":" + appProfile.getUpdatePort(id);
 		String url = appProfile.getUpdateProtocolScheme(id) + "://" + appProfile.getUpdateHost(id) + port
 				+ appProfile.getUpdatePath(id);
-		if (appProfile.getUpdateMethod(id).equals(HTTPMethod.GET))
-			updateURL.setText("GET " + url);
-		else if (appProfile.getUpdateMethod(id).equals(HTTPMethod.POST))
+		if (appProfile.getUpdateMethod(id).equals(UpdateHTTPMethod.POST))
 			updateURL.setText("POST " + url);
-		else if (appProfile.getUpdateMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
+		else if (appProfile.getUpdateMethod(id).equals(UpdateHTTPMethod.URL_ENCODED_POST))
 			updateURL.setText("URL ENCODED POST " + url);
 
 		usingGraphURI.setText(appProfile.getUsingGraphURI(id).toString());
@@ -3023,11 +3163,11 @@ public class Dashboard implements LoginListener {
 		String url = appProfile.getQueryProtocolScheme(id) + "://" + appProfile.getQueryHost(id) + port
 				+ appProfile.getQueryPath(id);
 
-		if (appProfile.getQueryMethod(id).equals(HTTPMethod.GET))
+		if (appProfile.getQueryMethod(id).equals(QueryHTTPMethod.GET))
 			queryURL.setText("GET " + url);
-		else if (appProfile.getQueryMethod(id).equals(HTTPMethod.POST))
+		else if (appProfile.getQueryMethod(id).equals(QueryHTTPMethod.POST))
 			queryURL.setText("POST " + url);
-		else if (appProfile.getQueryMethod(id).equals(HTTPMethod.URL_ENCODED_POST))
+		else if (appProfile.getQueryMethod(id).equals(QueryHTTPMethod.URL_ENCODED_POST))
 			queryURL.setText("URL ENCODED POST " + url);
 
 		if (appProfile.getSubscribeProtocol(id).equals(SubscriptionProtocol.WS))
@@ -3146,7 +3286,7 @@ public class Dashboard implements LoginListener {
 	// LOGIN
 
 	@Override
-	public void onLogin(String id) {//, String secret,boolean remember) {
+	public void onLogin(String id) {// , String secret,boolean remember) {
 		try {
 			sepaClient = new GenericClient(appProfile, handler);
 
@@ -3154,9 +3294,9 @@ public class Dashboard implements LoginListener {
 			btnLogin.setEnabled(true);
 			btnLogin.setText("Sign out");
 			signedIn = true;
-			
-			frmSepaDashboard.setTitle(title+" - Client ID: "+id);
-			
+
+			frmSepaDashboard.setTitle(title + " - Client ID: " + id);
+
 		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException e) {
 			logger.error(e.getMessage());
 		}

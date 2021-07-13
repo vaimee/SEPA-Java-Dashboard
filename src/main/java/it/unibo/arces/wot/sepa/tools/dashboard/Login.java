@@ -179,7 +179,7 @@ public class Login extends JDialog {
 	private void submit() {
 		try {
 			sm = new ClientSecurityManager(oauth);
-			sm.setClientCredentials(ID.getText(), new String(PWD.getPassword()));
+			oauth.setCredentials(ID.getText(), new String(PWD.getPassword()));
 
 			Response ret = sm.refreshToken();
 			if (ret.isError()) {
@@ -189,7 +189,7 @@ public class Login extends JDialog {
 				return;
 			}
 
-			if (chckRemeberMe.isSelected()) sm.storeOAuthProperties();
+			if (chckRemeberMe.isSelected()) oauth.storeProperties();
 			
 			m_listener.onLogin(ID.getText());//, new String(PWD.getPassword()),chckRemeberMe.isSelected());
 		} catch (SEPASecurityException | SEPAPropertiesException e1) {
