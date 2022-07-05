@@ -56,6 +56,7 @@ import javax.xml.datatype.DatatypeFactory;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.appender.rolling.action.IfAccumulatedFileCount;
 
 import javax.swing.JPanel;
 import javax.crypto.BadPaddingException;
@@ -726,9 +727,19 @@ public class Dashboard implements LoginListener {
 		/**
 		 * 
 		 */
+		class Row {
+			public String uri;
+			public Integer  counter;
+			
+			public Row(String uri,Integer counter) {
+				this.uri = uri;
+				this.counter= counter;
+			}
+		}
+		
 		private static final long serialVersionUID = -72022807754650051L;
-		private ArrayList<String> uriArrayList = new ArrayList<>();
-		private ArrayList<Integer> counterArrayList = new ArrayList<>();
+		private ArrayList<Row> graphs = new ArrayList<>();
+		//private ArrayList<Integer> counterArrayList = new ArrayList<>();
 
 		private String[] columnStrings = { "Named graph URI", "Triples" };
 
@@ -738,7 +749,7 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public int getRowCount() {
-			return uriArrayList.size();
+			return graphs.size();
 		}
 
 		@Override
@@ -748,22 +759,25 @@ public class Dashboard implements LoginListener {
 
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex) {
-			if (columnIndex == 0)
-				return uriArrayList.get(rowIndex);
-			return counterArrayList.get(rowIndex);
+			if (columnIndex == 0) return graphs.get(rowIndex).uri;
+			return graphs.get(rowIndex).counter;
 		}
 
 		public void addRow(String uri, Integer count) {
-			uriArrayList.add(uri);
-			counterArrayList.add(count);
+			graphs.add(new Row(uri,count));
 			fireTableDataChanged();
+		}
+		
+		public void removeRow(String uri) {
+			for (int i=0; i < graphs.size() ; i++) if(graphs.get(i).uri.equals(uri)) {
+				graphs.remove(i);
+				fireTableDataChanged();
+				break;
+			} 
 		}
 
 		public void clear() {
-			uriArrayList.clear();
-			;
-			counterArrayList.clear();
-			;
+			graphs.clear();
 			fireTableDataChanged();
 		}
 	}
@@ -2043,30 +2057,37 @@ public class Dashboard implements LoginListener {
 			public void mouseClicked(MouseEvent e) {
 				int[] rows = graphsTable.getSelectedRows();
 				if (rows.length > 0) {
+					int index = graphsTable.convertRowIndexToModel(rows[0]);
+					
 					int dialogResult = JOptionPane.showConfirmDialog(null,
-							"Are you sure? " + graphs.getValueAt(rows[0], 0).toString() + " will be deleted!",
+							"Are you sure? " + graphs.getValueAt(index, 0).toString() + " will be deleted!",
 							"Warning", JOptionPane.YES_NO_OPTION);
 					if (dialogResult == JOptionPane.YES_OPTION) {
 //						for (int i : rows) {
 						Bindings forced = new Bindings();
-						forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(rows[0], 0).toString()));
+						forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(index, 0).toString()));
 						try {
 							if (sepaClient == null) {
 								JOptionPane.showMessageDialog(null, "You need to sign in first",
 										"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
 								return;
 							}
-							sepaClient.update("___DASHBOARD_DROP_GRAPH", forced, Integer.parseInt(timeout.getText()),
+							Response ret = sepaClient.update("___DASHBOARD_DROP_GRAPH", forced, Integer.parseInt(timeout.getText()),
 									Integer.parseInt(nRetry.getText()));
+							if (ret.isUpdateResponse()) {
+								graphs.removeRow(graphs.getValueAt(index, 0).toString());
+							}
 						} catch (SEPAProtocolException | SEPASecurityException | IOException | SEPAPropertiesException
 								| SEPABindingsException e1) {
 							logger.error(e1.getMessage());
 							if (logger.isTraceEnabled())
 								e1.printStackTrace();
 						}
+						
+						//onExplorerOpenTab(true);
 					}
 
-					onExplorerOpenTab(true);
+					
 //					}
 				}
 			}
@@ -2092,13 +2113,13 @@ public class Dashboard implements LoginListener {
 		graphsTable.setRowSelectionAllowed(false);
 		graphsTable.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(graphsTable.getModel());
-		Comparator<Integer> compare = new Comparator<Integer>() {
-			@Override
-			public int compare(Integer o1, Integer o2) {
-				return o1.compareTo(o2);
-			}
-		};
-		sorter.setComparator(1, compare);
+//		Comparator<Integer> compare = new Comparator<Integer>() {
+//			@Override
+//			public int compare(Integer o1, Integer o2) {
+//				return o1.compareTo(o2);
+//			}
+//		};
+//		sorter.setComparator(1, compare);
 		graphsTable.setRowSorter(sorter);
 		graphsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		graphsTable.setCellSelectionEnabled(true);
@@ -2417,15 +2438,15 @@ public class Dashboard implements LoginListener {
 			public void itemStateChanged(ItemEvent e) {
 				if (chckbxNewCheckBox.isSelected()) {
 					scrollPane_5.setVisible(false);
-					
+
 					Rectangle main = mainTabs.getBounds();
 					main.height += textArea.getHeight();
 					mainTabs.setBounds(main);
-					
+
 					Rectangle control = panel_9.getBounds();
 					control.y += textArea.getHeight();
 					panel_9.setBounds(control);
-					
+
 //					Rectangle top = panel_8.getBounds();
 //					Rectangle main = mainTabs.getBounds();
 //					Rectangle control = panel_9.getBounds();
@@ -2438,57 +2459,54 @@ public class Dashboard implements LoginListener {
 //					
 //					scrollPane_5.setBounds(info);
 //					mainTabs.setBounds(main);
-					//panel_9.setBounds(control);
-					//scrollPane_5.setBounds(info);
-					
-					//info.y += info.height;
-					//scrollPane_5.setBounds(info);
-					
-					//Rectangle control = panel_9.getBounds();
-					//control.y += info.height;
-					//panel_9.setBounds(control);
-					
-										
-					
-					//Rectangle info = textArea.getBounds();
-					
+					// panel_9.setBounds(control);
+					// scrollPane_5.setBounds(info);
+
+					// info.y += info.height;
+					// scrollPane_5.setBounds(info);
+
+					// Rectangle control = panel_9.getBounds();
+					// control.y += info.height;
+					// panel_9.setBounds(control);
+
+					// Rectangle info = textArea.getBounds();
+
 //					int logH = info.height;
 //					
 //					b.height += logH;
-					
-					
-					//control.y += logH;
-					//info.y += logH;
-					//mainTabs.setBounds(b);
-					//panel_9.setBounds(control);
-					//scrollPane_9.setBounds(info);
-					//scrollPane_5.setVisible(false);
-					
-					//info.height = 0;
-					//info.y += 10;
-					//scrollPane_5.setBounds(info);
-					//b.y += 10;
-					//scrollPane_9.setBounds(b);
-					//scrollPane_5.setVisible(false);
-					
-					//Rectangle b = panel_9.getBounds();
-					//b.y += info.height;
-					//panel_9.setBounds(b);
+
+					// control.y += logH;
+					// info.y += logH;
+					// mainTabs.setBounds(b);
+					// panel_9.setBounds(control);
+					// scrollPane_9.setBounds(info);
+					// scrollPane_5.setVisible(false);
+
+					// info.height = 0;
+					// info.y += 10;
+					// scrollPane_5.setBounds(info);
+					// b.y += 10;
+					// scrollPane_9.setBounds(b);
+					// scrollPane_5.setVisible(false);
+
+					// Rectangle b = panel_9.getBounds();
+					// b.y += info.height;
+					// panel_9.setBounds(b);
 					// Rectangle b = infoPanel.getBounds();
 					// b.y += b.height;
 					// infoPanel.setBounds(b);
-					
+
 				} else {
 					scrollPane_5.setVisible(true);
-					
+
 					Rectangle main = mainTabs.getBounds();
 					main.height -= textArea.getHeight();
 					mainTabs.setBounds(main);
-					
+
 					Rectangle control = panel_9.getBounds();
 					control.y -= textArea.getHeight();
 					panel_9.setBounds(control);
-					
+
 //					Rectangle info = scrollPane_5.getBounds();
 //					info.y -= info.height;
 //					//scrollPane_5.setBounds(info);
@@ -2496,19 +2514,17 @@ public class Dashboard implements LoginListener {
 //					Rectangle control = panel_9.getBounds();
 //					control.y -= info.height;
 //					panel_9.setBounds(control);
-					
-					//Rectangle info = textArea.getBounds();
-					
+
+					// Rectangle info = textArea.getBounds();
+
 //					int logH = info.height;
 //					
 //					b.height += logH;
-					
-					
-					
+
 					// Rectangle b = infoPanel.getBounds();
 					// b.y -= b.height;
 					// infoPanel.setBounds(b);
-					//scrollPane_5.setVisible(true);
+					// scrollPane_5.setVisible(true);
 				}
 			}
 		});
@@ -2524,7 +2540,7 @@ public class Dashboard implements LoginListener {
 		gbc_chckbxNewCheckBox.gridy = 0;
 		panel_9.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
 	}
-	
+
 	JScrollPane scrollPane_5;
 
 	protected void onQnameCheckbox(ChangeEvent e) {
