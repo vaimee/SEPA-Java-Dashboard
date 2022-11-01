@@ -182,6 +182,23 @@
 				"named-graph-uri": []
 			}
 		},
+		"___DASHBOARD_BNODE_GRAPH": {
+			"sparql": "SELECT ?subject ?predicate ?label ?object FROM ?graph WHERE {?subject rdf:type ?parent . ?subject ?predicate ?object . OPTIONAL {?predicate rdfs:label ?label}}",
+			"forcedBindings": {
+				"graph": {
+					"type": "uri",
+					"value": "http://localhost:8890/DAV"
+				},
+				"parent": {
+					"type": "uri",
+					"value": "http://qudt.org/vocab/unit#Hour"
+				}
+			},
+			"graphs": {
+				"default-graph-uri": [],
+				"named-graph-uri": []
+			}
+		},
 		"___DASHBOARD_GRAPHS": {
 			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {GRAPH ?graph {?s ?p ?o}} GROUP BY ?graph",
 			"graphs": {
