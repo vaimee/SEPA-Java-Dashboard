@@ -56,7 +56,6 @@ import javax.xml.datatype.DatatypeFactory;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.appender.rolling.action.IfAccumulatedFileCount;
 
 import javax.swing.JPanel;
 import javax.crypto.BadPaddingException;
@@ -70,7 +69,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JScrollPane;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.SortedSet;
@@ -1719,8 +1717,10 @@ public class Dashboard implements LoginListener {
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
 				JComponent.WHEN_FOCUSED);
 		updateForcedBindings.setCellSelectionEnabled(true);
+		updateForcedBindings.getTableHeader().setBackground(Color.WHITE);
 
 		JSplitPane queries = new JSplitPane();
+		queries.setBackground(Color.LIGHT_GRAY);
 		queries.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		GridBagConstraints gbc_queries = new GridBagConstraints();
 		gbc_queries.anchor = GridBagConstraints.NORTH;
@@ -1799,6 +1799,7 @@ public class Dashboard implements LoginListener {
 
 		queryForcedBindings = new JTable(subscribeForcedBindingsDM);
 		queryForcedBindings.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		queryForcedBindings.getTableHeader().setBackground(Color.WHITE);
 		queryForcedBindings.setFillsViewportHeight(true);
 		scrollPane_3.setViewportView(queryForcedBindings);
 		queryForcedBindings.getModel().addTableModelListener(new TableModelListener() {
@@ -1990,6 +1991,8 @@ public class Dashboard implements LoginListener {
 		bindingsResultsTable.registerKeyboardAction(new CopyAction(),
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
 				JComponent.WHEN_FOCUSED);
+		bindingsResultsTable.getTableHeader().setBackground(Color.WHITE);
+
 
 		results.setViewportView(bindingsResultsTable);
 		bindingsRender.setNamespaces(namespacesDM);
@@ -2017,6 +2020,7 @@ public class Dashboard implements LoginListener {
 
 		namespacesTable = new JTable(namespacesDM);
 		namespacesTable.setFont(new Font("Montserrat", Font.PLAIN, 13));
+		namespacesTable.getTableHeader().setBackground(Color.WHITE);
 		scrollPane_4.setViewportView(namespacesTable);
 
 		JPanel explorerPanel = new JPanel();
@@ -2123,6 +2127,7 @@ public class Dashboard implements LoginListener {
 		graphsTable.setRowSorter(sorter);
 		graphsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		graphsTable.setCellSelectionEnabled(true);
+		graphsTable.getTableHeader().setBackground(Color.WHITE);
 
 		// graphsTable.setAutoCreateRowSorter(true);
 		scrollPane_9.setViewportView(graphsTable);
@@ -2254,6 +2259,7 @@ public class Dashboard implements LoginListener {
 		panel_1.add(scrollPane_8, gbc_scrollPane_8);
 
 		tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
+		tableInstanceProperties.getTableHeader().setBackground(Color.WHITE);
 		tableInstanceProperties.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		tableInstanceProperties.addMouseListener(new MouseAdapter() {
 			@Override
