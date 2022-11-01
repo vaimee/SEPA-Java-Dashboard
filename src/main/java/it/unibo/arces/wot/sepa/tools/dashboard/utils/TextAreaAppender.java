@@ -1,4 +1,4 @@
-package it.unibo.arces.wot.sepa.tools.dashboard;
+package it.unibo.arces.wot.sepa.tools.dashboard.utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,7 +14,7 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
-class TextAreaAppender extends OutputStream {
+public class TextAreaAppender extends OutputStream {
 	private JTextArea area;
 	
 	public TextAreaAppender(JTextArea area) {

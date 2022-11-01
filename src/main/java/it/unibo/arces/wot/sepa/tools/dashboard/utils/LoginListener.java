@@ -1,4 +1,4 @@
-package it.unibo.arces.wot.sepa.tools.dashboard;
+package it.unibo.arces.wot.sepa.tools.dashboard.utils;
 
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
 

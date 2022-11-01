@@ -19,22 +19,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package it.unibo.arces.wot.sepa.tools.dashboard;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -45,14 +41,9 @@ import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelListener;
-import javax.swing.filechooser.FileFilter;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
-import javax.xml.datatype.DatatypeFactory;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -61,9 +52,6 @@ import javax.swing.JPanel;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.swing.AbstractAction;
-import javax.swing.AbstractListModel;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JScrollPane;
@@ -71,8 +59,6 @@ import javax.swing.JScrollPane;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.Vector;
 
 import javax.swing.JTabbedPane;
@@ -81,8 +67,23 @@ import java.awt.event.ActionEvent;
 import javax.swing.JSplitPane;
 
 import it.unibo.arces.wot.sepa.pattern.JSAP;
+import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingValue;
+import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingsRender;
+import it.unibo.arces.wot.sepa.tools.dashboard.bindings.ForcedBindingsRenderer;
+import it.unibo.arces.wot.sepa.tools.dashboard.explorer.ExplorerTreeModel;
+import it.unibo.arces.wot.sepa.tools.dashboard.explorer.ExplorerTreeRenderer;
+import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.BindingsTableModel;
+import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.ForcedBindingsTableModel;
+import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.GraphTableModel;
+import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.InstanceTableModel;
+import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.SortedListModel;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.CopyAction;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.Login;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.LoginListener;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.Register;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.TextAreaAppender;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.Utilities;
 import it.unibo.arces.wot.sepa.pattern.GenericClient;
-import it.unibo.arces.wot.sepa.api.ISubscriptionHandler;
 import it.unibo.arces.wot.sepa.api.SPARQL11SEProperties.SubscriptionProtocol;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
@@ -91,14 +92,11 @@ import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
 import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.QueryHTTPMethod;
 import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.UpdateHTTPMethod;
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
-import it.unibo.arces.wot.sepa.commons.response.Notification;
 import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
 import it.unibo.arces.wot.sepa.commons.response.Response;
 import it.unibo.arces.wot.sepa.commons.security.OAuthProperties;
 import it.unibo.arces.wot.sepa.commons.security.ClientSecurityManager;
-import it.unibo.arces.wot.sepa.commons.sparql.ARBindingsResults;
 import it.unibo.arces.wot.sepa.commons.sparql.Bindings;
-import it.unibo.arces.wot.sepa.commons.sparql.BindingsResults;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTerm;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermBNode;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermLiteral;
@@ -128,9 +126,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeNode;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
 
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -147,7 +143,7 @@ public class Dashboard implements LoginListener {
 	static Dashboard window;
 
 	private GenericClient sepaClient;
-	private DashboardHandler handler = new DashboardHandler();
+	private DashboardHandler handler;
 	private JSAP appProfile = null;
 	private Properties appProperties = new Properties();
 	private OAuthProperties oauth = null;
@@ -158,7 +154,7 @@ public class Dashboard implements LoginListener {
 
 	private BindingsTableModel bindingsDM = new BindingsTableModel();
 	private BindingsRender bindingsRender = new BindingsRender();
-	private InstanceTableModel tableInstancePropertiesDataModel = new InstanceTableModel();
+	private InstanceTableModel tableInstancePropertiesDataModel;
 	private GraphTableModel graphs = new GraphTableModel();
 
 	private ForcedBindingsTableModel updateForcedBindingsDM = new ForcedBindingsTableModel();
@@ -168,7 +164,7 @@ public class Dashboard implements LoginListener {
 	private SortedListModel queryListDM = new SortedListModel();
 	private SortedListModel jsapListDM = new SortedListModel();
 
-	private HashMap<String, JPanel> subscriptions = new HashMap<String, JPanel>();
+	
 	private HashMap<String, BindingsTableModel> subscriptionResultsDM = new HashMap<String, BindingsTableModel>();
 	private HashMap<String, JLabel> subscriptionResultsLabels = new HashMap<String, JLabel>();
 	private HashMap<String, JTable> subscriptionResultsTables = new HashMap<String, JTable>();
@@ -232,861 +228,10 @@ public class Dashboard implements LoginListener {
 	private JCheckBox chckbxQname;
 	private JLabel graphsEndpointLabel;
 
+	JScrollPane scrollPane_5;
+	
 	private boolean signedIn = false;
 	private JTextField nRetry;
-
-	class DashboardHandler implements ISubscriptionHandler {
-		protected String unsubSpuid;
-
-		@Override
-		public void onSemanticEvent(Notification n) {
-			ARBindingsResults notify = n.getARBindingsResults();
-			String spuid = n.getSpuid();
-
-			int added = 0;
-			int removed = 0;
-
-			if (notify != null) {
-
-				if (notify.getAddedBindings() != null)
-					added = notify.getAddedBindings().size();
-				if (notify.getRemovedBindings() != null)
-					removed = notify.getRemovedBindings().size();
-
-				try {
-					subscriptionResultsDM.get(spuid).setResults(notify, spuid);
-				} catch (SEPABindingsException e) {
-					logger.error(e.getMessage());
-				}
-
-				subscriptionResultsLabels.get(spuid)
-						.setText("Bindings results (" + subscriptionResultsDM.get(spuid).getRowCount() + ") Added("
-								+ added + ") + Removed (" + removed + ")");
-			}
-
-		}
-
-		@Override
-		public void onBrokenConnection(ErrorResponse err) {
-			logger.error("*** BROKEN CONNECTION *** " + err);
-		}
-
-		@Override
-		public void onError(ErrorResponse errorResponse) {
-			logger.error(errorResponse);
-		}
-
-		@Override
-		public void onSubscribe(String spuid, String alias) {
-			// Subscription panel
-			JPanel sub = new JPanel();
-
-			// Layout
-			GridBagConstraints layoutFill = new GridBagConstraints();
-			layoutFill.fill = GridBagConstraints.BOTH;
-			sub.setLayout(new BoxLayout(sub, BoxLayout.Y_AXIS));
-			sub.setName(queryList.getSelectedValue());
-
-			// Query label
-			JLabel queryLabel = new JLabel("<html>" + querySPARQL.getText() + "</html>");
-			queryLabel.setFont(new Font("Arial", Font.BOLD, 14));
-
-			// Info label
-			JLabel info = new JLabel("Info");
-			info.setText(spuid);
-			subscriptionResultsLabels.put(spuid, info);
-
-			// Unsubscribe button
-			JButton unsubscribeButton = new JButton(spuid);
-			unsubscribeButton.setEnabled(true);
-			unsubscribeButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent e) {
-					try {
-//						subOp = SUB_OP.UNSUB;
-						unsubSpuid = spuid;
-						if (sepaClient == null) {
-							JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-									JOptionPane.INFORMATION_MESSAGE);
-							return;
-						}
-						sepaClient.unsubscribe(spuid, Integer.parseInt(timeout.getText()),
-								Integer.parseInt(nRetry.getText()));
-						new Thread() {
-							public void run() {
-								try {
-									Thread.sleep(2000);
-								} catch (InterruptedException e) {
-									return;
-								}
-								if (subscriptions.containsKey(spuid)) {
-									logger.warn("Force unsubscribe");
-									onUnsubscribe(spuid);
-								}
-							}
-						}.start();
-					} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException
-							| SEPAProtocolException | InterruptedException e1) {
-						logger.error(e1.getMessage());
-					}
-				}
-			});
-
-			// Results table
-			subscriptionResultsDM.put(spuid, new BindingsTableModel());
-
-			JTable bindingsResultsTable = new JTable(subscriptionResultsDM.get(spuid));
-			JScrollPane bindingsResults = new JScrollPane();
-			bindingsResults.setViewportView(bindingsResultsTable);
-
-			bindingsResultsTable.setDefaultRenderer(Object.class, bindingsRender);
-			bindingsResultsTable.setAutoCreateRowSorter(true);
-			bindingsResultsTable.registerKeyboardAction(new CopyAction(),
-					KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
-					JComponent.WHEN_FOCUSED);
-			bindingsResultsTable.setCellSelectionEnabled(true);
-
-			subscriptionResultsTables.put(spuid, bindingsResultsTable);
-
-			// Add all elements
-			sub.add(queryLabel);
-			sub.add(unsubscribeButton);
-			sub.add(bindingsResults);
-			sub.add(info);
-
-			// Add tab
-			subscriptionsPanel.add(sub, layoutFill);
-
-			subscriptionsPanel.setSelectedIndex(subscriptionsPanel.getTabCount() - 1);
-			mainTabs.setSelectedIndex(1);
-
-			subscriptions.put(spuid, sub);
-
-		}
-
-		@Override
-		public void onUnsubscribe(String spuid) {
-			if (subscriptions.containsKey(spuid)) {
-				subscriptionsPanel.remove(subscriptions.get(spuid));
-				subscriptions.remove(spuid);
-				subscriptionResultsDM.remove(spuid);
-				subscriptionResultsLabels.remove(spuid);
-				subscriptionResultsTables.remove(spuid);
-			}
-		}
-	}
-
-	private class SortedListModel extends AbstractListModel<String> {
-
-		/**
-		* 
-		*/
-		private static final long serialVersionUID = -4860350252985388420L;
-
-		SortedSet<String> model;
-
-		public SortedListModel() {
-			model = new TreeSet<String>();
-		}
-
-		public int getSize() {
-			return model.size();
-		}
-
-		public String getElementAt(int index) {
-			return (String) model.toArray()[index];
-		}
-
-		public void add(String element) {
-			if (model.add(element)) {
-				fireContentsChanged(this, 0, getSize());
-			}
-		}
-
-		public void clear() {
-			model.clear();
-			fireContentsChanged(this, 0, getSize());
-		}
-	}
-
-	private class CopyAction extends AbstractAction {
-
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 5927169526678239559L;
-
-		/**
-		 * {@inheritDoc}
-		 */
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			final JTable tbl = (JTable) e.getSource();
-
-			StringBuffer sbf = new StringBuffer();
-
-			int[] rowsselected = tbl.getSelectedRows();
-			int[] colsselected = tbl.getSelectedColumns();
-
-			for (int i = 0; i < rowsselected.length; i++) {
-				for (int j = 0; j < colsselected.length; j++) {
-					TableCellRenderer renderer = tbl.getCellRenderer(rowsselected[i], colsselected[j]);
-					final Component comp = tbl.prepareRenderer(renderer, rowsselected[i], colsselected[j]);
-					String toCopy = ((JLabel) comp).getText();
-					sbf.append(toCopy);
-					if (j < colsselected.length - 1)
-						sbf.append("\t");
-				}
-				if (i < rowsselected.length - 1)
-					sbf.append("\n");
-			}
-			StringSelection stsel = new StringSelection(sbf.toString());
-			Clipboard system = Toolkit.getDefaultToolkit().getSystemClipboard();
-			system.setContents(stsel, stsel);
-		}
-
-	}
-
-	private class ForcedBindingsTableModel extends AbstractTableModel {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -8524602022439421892L;
-
-		ArrayList<String[]> rowValues = new ArrayList<String[]>();
-		ArrayList<String> rowTypes = new ArrayList<String>();
-		ArrayList<String> columns = new ArrayList<String>();
-
-		public void clearBindings() {
-			rowValues.clear();
-			rowTypes.clear();
-
-			super.fireTableDataChanged();
-		}
-
-		public void addBindings(String variable, String literal, String value) {
-			if (value != null)
-				rowValues.add(new String[] { variable, value });
-			else
-				rowValues.add(new String[] { variable, "" });
-			rowTypes.add(literal);
-
-			super.fireTableDataChanged();
-		}
-
-		public ForcedBindingsTableModel() {
-			columns.add("Variable");
-			columns.add("Value");
-			columns.add("Datatype");
-		}
-
-		@Override
-		public int getRowCount() {
-			return rowValues.size();
-		}
-
-		@Override
-		public int getColumnCount() {
-			return 3;
-		}
-
-		@Override
-		public Object getValueAt(int rowIndex, int columnIndex) {
-			if (columnIndex == 0 || columnIndex == 1)
-				return rowValues.get(rowIndex)[columnIndex];
-			return rowTypes.get(rowIndex);
-		}
-
-		@Override
-		public Class<?> getColumnClass(int columnIndex) {
-			return String.class;
-		}
-
-		@Override
-		public String getColumnName(int columnIndex) {
-			if (columnIndex < getColumnCount())
-				return columns.get(columnIndex);
-			return null;
-		}
-
-		@Override
-		public boolean isCellEditable(int rowIndex, int columnIndex) {
-			if (columnIndex == 1)
-				return true;
-			return false;
-		}
-
-		@Override
-		public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
-			super.setValueAt(aValue, rowIndex, columnIndex);
-
-			if (rowIndex > rowValues.size() - 1)
-				return;
-
-			if (columnIndex == 1) {
-				String[] currentValue = rowValues.get(rowIndex);
-				currentValue[1] = (String) aValue;
-				rowValues.set(rowIndex, currentValue);
-			}
-			if (columnIndex == 2)
-				rowTypes.set(rowIndex, (String) aValue);
-
-			super.fireTableCellUpdated(rowIndex, columnIndex);
-		}
-
-		@Override
-		public void addTableModelListener(TableModelListener l) {
-			super.addTableModelListener(l);
-		}
-
-		@Override
-		public void removeTableModelListener(TableModelListener l) {
-			super.removeTableModelListener(l);
-		}
-
-	}
-
-	private class BindingValue implements Comparable<BindingValue> {
-		private boolean added = true;
-		private String value;
-		private boolean literal = true;
-		private String dataType = null;
-
-		public BindingValue(String value, boolean literal, String dataType, boolean added) {
-			this.value = value;
-			this.added = added;
-			this.literal = literal;
-			this.dataType = dataType;
-		}
-
-		public boolean isAdded() {
-			return added;
-
-		}
-
-		public String get() {
-			return value;
-		}
-
-		public String getDataType() {
-			return dataType;
-		}
-
-		public boolean isLiteral() {
-			return literal;
-		}
-
-		@Override
-		public int compareTo(BindingValue o) {
-			return value.compareTo(o.get());
-		}
-	}
-
-	private class BindingsTableModel extends AbstractTableModel {
-
-		private static final long serialVersionUID = 2698789913874225961L;
-
-		ArrayList<HashMap<String, BindingValue>> rows = new ArrayList<HashMap<String, BindingValue>>();
-		ArrayList<String> columns = new ArrayList<String>();
-
-		public void clear() {
-			columns.clear();
-			rows.clear();
-
-			super.fireTableStructureChanged();
-			super.fireTableDataChanged();
-		}
-
-		public void setResults(ARBindingsResults res, String spuid) throws SEPABindingsException {
-			if (res == null)
-				return;
-
-			ArrayList<String> vars = res.getAddedBindings().getVariables();
-			for (String var : res.getRemovedBindings().getVariables()) {
-				if (!vars.contains(var))
-					vars.add(var);
-			}
-
-			if (!columns.containsAll(vars) || columns.size() != vars.size()) {
-				columns.clear();
-				columns.addAll(vars);
-				super.fireTableStructureChanged();
-			}
-
-			if (res.getRemovedBindings() != null) {
-				for (Bindings sol : res.getRemovedBindings().getBindings()) {
-					HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
-					for (String var : sol.getVariables()) {
-						row.put(var,
-								new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), false));
-					}
-					rows.add(row);
-				}
-			}
-
-			if (res.getAddedBindings() != null) {
-				for (Bindings sol : res.getAddedBindings().getBindings()) {
-					HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
-					for (String var : sol.getVariables()) {
-						row.put(var,
-								new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
-					}
-					rows.add(row);
-				}
-			}
-
-			subscriptionResultsTables.get(spuid).changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1,
-					0, false, false);
-
-			super.fireTableDataChanged();
-		}
-
-		@Override
-		public Class<?> getColumnClass(int columnIndex) {
-			return BindingValue.class;
-		}
-
-		@Override
-		public int getRowCount() {
-			return rows.size();
-		}
-
-		@Override
-		public int getColumnCount() {
-			return columns.size();
-		}
-
-		@Override
-		public String getColumnName(int columnIndex) {
-			if (columnIndex < getColumnCount())
-				return columns.get(columnIndex);
-			return null;
-		}
-
-		@Override
-		public boolean isCellEditable(int rowIndex, int columnIndex) {
-			return false;
-		}
-
-		@Override
-		public Object getValueAt(int rowIndex, int columnIndex) {
-			BindingValue ret = null;
-			if (rowIndex < getRowCount() && columnIndex < getColumnCount()) {
-				ret = rows.get(rowIndex).get(columns.get(columnIndex));
-			}
-			return ret;
-		}
-
-		@Override
-		public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
-			super.setValueAt(aValue, rowIndex, columnIndex);
-
-			super.fireTableCellUpdated(rowIndex, columnIndex);
-		}
-
-		@Override
-		public void addTableModelListener(TableModelListener l) {
-			super.addTableModelListener(l);
-		}
-
-		@Override
-		public void removeTableModelListener(TableModelListener l) {
-			super.removeTableModelListener(l);
-		}
-
-		public void setAddedResults(BindingsResults bindingsResults, String spuid) throws SEPABindingsException {
-			if (bindingsResults == null)
-				return;
-
-			ArrayList<String> vars = bindingsResults.getVariables();
-
-			if (!columns.containsAll(vars) || columns.size() != vars.size()) {
-				columns.clear();
-				columns.addAll(vars);
-				super.fireTableStructureChanged();
-			}
-
-			for (Bindings sol : bindingsResults.getBindings()) {
-				HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
-				for (String var : sol.getVariables()) {
-					row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
-				}
-				rows.add(row);
-			}
-
-			if (subscriptionResultsTables.get(spuid) != null)
-				subscriptionResultsTables.get(spuid)
-						.changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1, 0, false, false);
-
-			super.fireTableDataChanged();
-		}
-	}
-
-	private class GraphTableModel extends AbstractTableModel {
-		/**
-		 * 
-		 */
-		class Row {
-			public String uri;
-			public Integer  counter;
-			
-			public Row(String uri,Integer counter) {
-				this.uri = uri;
-				this.counter= counter;
-			}
-		}
-		
-		private static final long serialVersionUID = -72022807754650051L;
-		private ArrayList<Row> graphs = new ArrayList<>();
-		//private ArrayList<Integer> counterArrayList = new ArrayList<>();
-
-		private String[] columnStrings = { "Named graph URI", "Triples" };
-
-		public String getColumnName(int col) {
-			return columnStrings[col];
-		}
-
-		@Override
-		public int getRowCount() {
-			return graphs.size();
-		}
-
-		@Override
-		public int getColumnCount() {
-			return 2;
-		}
-
-		@Override
-		public Object getValueAt(int rowIndex, int columnIndex) {
-			if (columnIndex == 0) return graphs.get(rowIndex).uri;
-			return graphs.get(rowIndex).counter;
-		}
-
-		public void addRow(String uri, Integer count) {
-			graphs.add(new Row(uri,count));
-			fireTableDataChanged();
-		}
-		
-		public void removeRow(String uri) {
-			for (int i=0; i < graphs.size() ; i++) if(graphs.get(i).uri.equals(uri)) {
-				graphs.remove(i);
-				fireTableDataChanged();
-				break;
-			} 
-		}
-
-		public void clear() {
-			graphs.clear();
-			fireTableDataChanged();
-		}
-	}
-
-	private class InstanceTableModel extends AbstractTableModel {
-
-		private String[] columnStrings = { "Predicate", "Object", "Datatype" };
-		private ArrayList<Bindings> rows = new ArrayList<Bindings>();
-
-		private static final long serialVersionUID = 1L;
-
-		public String getColumnName(int col) {
-			return columnStrings[col];
-		}
-
-		public int getRowCount() {
-			return rows.size();
-		}
-
-		public int getColumnCount() {
-			return columnStrings.length;
-		}
-
-		public Object getValueAt(int row, int col) {
-			if (col == 0)
-				return rows.get(row).getValue("predicate");
-			else if (col == 1)
-				return rows.get(row).getValue("object");
-			else {
-				try {
-					if (rows.get(row).getRDFTerm("object").isURI())
-						return "URI";
-					if (rows.get(row).getRDFTerm("object").isBNode())
-						return "BNODE";
-				} catch (SEPABindingsException e) {
-					logger.error(e.getMessage());
-					return "???";
-				}
-				return rows.get(row).getDatatype("object");
-			}
-		}
-
-		public boolean isCellEditable(int row, int col) {
-			if (col == 1)
-				return true;
-			return false;
-		}
-
-		public void setValueAt(Object value, int row, int col) {
-			Bindings newBindings = new Bindings();
-
-			String graphString = (String) graphs.getValueAt(graphsTable.getSelectedRow(), 0);
-
-			newBindings.addBinding("graph", new RDFTermURI(graphString));
-
-			try {
-				newBindings.addBinding("predicate", rows.get(row).getRDFTerm("predicate"));
-				newBindings.addBinding("subject", new RDFTermURI(currentSubject.getText()));
-
-				if (rows.get(row).getRDFTerm("object").isLiteral()) {
-					newBindings.addBinding("object", new RDFTermLiteral((String) value));
-					if (sepaClient == null) {
-						JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-								JOptionPane.INFORMATION_MESSAGE);
-						return;
-					}
-					sepaClient.update("___DASHBOARD_UPDATE_LITERAL", newBindings, Integer.parseInt(timeout.getText()),
-							Integer.parseInt(nRetry.getText()));
-				} else {
-					newBindings.addBinding("object", new RDFTermURI((String) value));
-					if (sepaClient == null) {
-						JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-								JOptionPane.INFORMATION_MESSAGE);
-						return;
-					}
-					sepaClient.update("___DASHBOARD_UPDATE_URI", newBindings, Integer.parseInt(timeout.getText()),
-							Integer.parseInt(nRetry.getText()));
-				}
-			} catch (SEPABindingsException | SEPAProtocolException | SEPASecurityException | IOException
-					| SEPAPropertiesException e) {
-				logger.error(e.getMessage());
-				if (logger.isTraceEnabled())
-					e.printStackTrace();
-				return;
-			}
-			rows.remove(row);
-			rows.add(row, newBindings);
-			fireTableCellUpdated(row, col);
-		}
-
-		public void clear() {
-			rows.clear();
-			super.fireTableDataChanged();
-		}
-
-		public void addRow(Bindings b) {
-			rows.add(b);
-		}
-
-	}
-
-	private class ForcedBindingsRenderer extends DefaultTableCellRenderer {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -1541296097107576037L;
-
-		@Override
-		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
-				int row, int col) {
-
-			// Cells are by default rendered as a JLabel.
-			JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
-
-			if (col == 2) {
-				String v = (String) table.getValueAt(row, 1);
-				String type = (String) table.getValueAt(row, 2);
-				logger.trace("Row: " + row + " Col: " + col + " Value: " + v + " Type: " + type);
-				if (type == null)
-					l.setBackground(Color.WHITE);
-				else if (checkType(v, type)) {
-					if (v.equals(""))
-						l.setBackground(Color.ORANGE);
-					else
-						l.setBackground(Color.GREEN);
-				} else
-					l.setBackground(Color.RED);
-			} else
-				l.setBackground(Color.WHITE);
-
-			l.setForeground(Color.BLACK);
-
-			return l;
-		}
-	}
-
-	private class BindingsRender extends DefaultTableCellRenderer {
-		private static final long serialVersionUID = 3932800852596396532L;
-
-		DefaultTableModel namespaces;
-		private boolean showAsQname = true;
-		private boolean showDataType = true;
-
-		public BindingsRender() {
-			super();
-		}
-
-		public void setNamespaces(DefaultTableModel namespaces) {
-			this.namespaces = namespaces;
-		}
-
-		public void showAsQName(boolean set) {
-			showAsQname = set;
-		}
-
-		public void showDataType(boolean show) {
-			showDataType = show;
-		}
-
-		private String qName(String value, boolean literal, String dataType) {
-			if (namespaces == null)
-				return value;
-			if (value == null)
-				return null;
-
-			if (!literal) {
-				for (int row = 0; row < namespaces.getRowCount(); row++) {
-					String prefix = namespaces.getValueAt(row, 0).toString();
-					String ns = namespaces.getValueAt(row, 1).toString();
-					if (value.startsWith(ns))
-						return value.replace(ns, prefix + ":");
-				}
-			} else if (dataType != null && showDataType) {
-				for (int row = 0; row < namespaces.getRowCount(); row++) {
-					String prefix = namespaces.getValueAt(row, 0).toString();
-					String ns = namespaces.getValueAt(row, 1).toString();
-					if (dataType.startsWith(ns)) {
-						dataType = dataType.replace(ns, prefix + ":");
-						break;
-					}
-				}
-				return value + "^^" + dataType;
-			}
-			return value;
-		}
-
-		@Override
-		public void setValue(Object value) {
-			super.setValue(value);
-
-			if (value == null)
-				return;
-
-			BindingValue binding = (BindingValue) value;
-
-			if (binding.isLiteral()) {
-				setFont(new Font(null, Font.BOLD, 12));
-				setForeground(Color.BLACK);
-			} else {
-				setFont(new Font(null, Font.PLAIN, 12));
-				setForeground(Color.BLACK);
-			}
-			if (binding.isAdded()) {
-				setBackground(Color.WHITE);
-			} else
-				setBackground(Color.LIGHT_GRAY);
-		}
-
-		@Override
-		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
-				int row, int column) {
-			super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-			BindingValue binding = (BindingValue) value;
-
-			if (binding == null) {
-				setText("");
-				return this;
-			}
-			if (binding.get() == null) {
-				setText("");
-				return this;
-			}
-
-			// Render as qname or URI
-			if (showAsQname)
-				setText(qName(binding.get(), binding.isLiteral(), binding.getDataType()));
-			else if (binding.isLiteral() && binding.getDataType() != null && showDataType)
-				setText(binding.get() + "^^" + binding.getDataType());
-			else
-				setText(binding.get());
-
-			if (isSelected) {
-				this.setBackground(Color.YELLOW);
-			}
-
-			return this;
-		}
-	}
-
-	private class ExplorerTreeModel extends DefaultTreeModel {
-
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -7082219083126306248L;
-
-		public ExplorerTreeModel(TreeNode root) {
-			super(root);
-		}
-
-		public ExplorerTreeModel() {
-			this(new DefaultMutableTreeNode("owl:Thing") {
-				/**
-				 * 
-				 */
-				private static final long serialVersionUID = -2640698448157863184L;
-
-				{
-				}
-			});
-		}
-
-	}
-
-	class ExplorerTreeRenderer extends DefaultTreeCellRenderer {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 4538238852715730476L;
-
-		DefaultTableModel namespaces;
-
-		public void setNamespaces(DefaultTableModel namespaces) {
-			this.namespaces = namespaces;
-		}
-
-		public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
-				boolean leaf, int row, boolean hasFocus) {
-
-			super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-
-			if (row == 0)
-				return this;
-
-			DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
-			Bindings nodeInfo = (Bindings) (node.getUserObject());
-
-			String text = "";
-			if (nodeInfo.getValue("class") != null) {
-				text = nodeInfo.getValue("class");
-			} else {
-				text = nodeInfo.getValue("instance");
-			}
-			setToolTipText(text);
-
-			if (chckbxQname.isSelected()) {
-				for (int r = 0; r < namespaces.getRowCount(); r++) {
-					String prefix = namespaces.getValueAt(r, 0).toString();
-					String ns = namespaces.getValueAt(r, 1).toString();
-					if (text.startsWith(ns)) {
-						text = text.replace(ns, prefix + ":");
-						break;
-					}
-				}
-			}
-			setText(text);
-
-			return this;
-		}
-	}
 
 	/**
 	 * Launch the application.
@@ -1124,7 +269,7 @@ public class Dashboard implements LoginListener {
 	public Dashboard() throws SEPAPropertiesException, SEPASecurityException, URISyntaxException {
 		initialize();
 
-		loadSAP(null, true);
+		loadJSAP(null, true);
 	}
 
 	private void loadDashboardProperties() throws IOException {
@@ -1132,7 +277,7 @@ public class Dashboard implements LoginListener {
 		appProperties.load(in);
 	}
 
-	protected boolean loadSAP(String file, boolean load) {
+	protected boolean loadJSAP(String file, boolean load) {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
@@ -1304,33 +449,6 @@ public class Dashboard implements LoginListener {
 		}
 
 		return true;
-	}
-
-	private class DashboardFileFilter extends FileFilter {
-		private ArrayList<String> extensions = new ArrayList<String>();
-		private String title = "Title";
-
-		public DashboardFileFilter(String title, String ext) {
-			super();
-			extensions.add(ext);
-			this.title = title;
-		}
-
-		@Override
-		public boolean accept(File f) {
-			if (f.isDirectory())
-				return true;
-			for (String ext : extensions)
-				if (f.getName().contains(ext))
-					return true;
-			return false;
-		}
-
-		@Override
-		public String getDescription() {
-			return title;
-		}
-
 	}
 
 	/**
@@ -2170,7 +1288,7 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_7.gridy = 1;
 		panel.add(scrollPane_7, gbc_scrollPane_7);
 
-		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer();
+		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer(chckbxQname);
 		explorerTreeRenderer.setNamespaces(namespacesDM);
 
 		explorerTree = new JTree();
@@ -2257,7 +1375,8 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_8.gridx = 0;
 		gbc_scrollPane_8.gridy = 4;
 		panel_1.add(scrollPane_8, gbc_scrollPane_8);
-
+		
+		tableInstancePropertiesDataModel = new InstanceTableModel(sepaClient, timeout, nRetry, graphs, lblProperties, graphsTable);
 		tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
 		tableInstanceProperties.getTableHeader().setBackground(Color.WHITE);
 		tableInstanceProperties.setFont(new Font("Montserrat", Font.PLAIN, 12));
@@ -2545,9 +1664,11 @@ public class Dashboard implements LoginListener {
 		gbc_chckbxNewCheckBox.gridx = 0;
 		gbc_chckbxNewCheckBox.gridy = 0;
 		panel_9.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
+		
+		handler = new DashboardHandler(subscriptionResultsDM,
+				subscriptionResultsLabels, subscriptionResultsTables,
+				queryList, querySPARQL,  sepaClient,  timeout,  nRetry, bindingsRender, subscriptionsPanel,  mainTabs);
 	}
-
-	JScrollPane scrollPane_5;
 
 	protected void onQnameCheckbox(ChangeEvent e) {
 		bindingsRender.showAsQName(chckbxQname.isSelected());
@@ -2913,7 +2034,7 @@ public class Dashboard implements LoginListener {
 				jsapFiles.remove(fileName);
 			}
 
-			if (loadSAP(fileName, !chckbxMerge.isSelected())) {
+			if (loadJSAP(fileName, !chckbxMerge.isSelected())) {
 				String path = "";
 				for (int i = 0; i < jsapFiles.size(); i++) {
 					if (i == 0)
@@ -3065,7 +2186,7 @@ public class Dashboard implements LoginListener {
 				queryInfo.setText(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
 						(stop.toEpochMilli() - start.toEpochMilli())));
 				bindingsDM.clear();
-				bindingsDM.setAddedResults(results.getBindingsResults(), null);
+				bindingsDM.setAddedResults(subscriptionResultsTables,results.getBindingsResults(), null);
 			}
 		} catch (NumberFormatException | SEPAProtocolException | SEPASecurityException | IOException e) {
 			logger.error(e.getMessage());
@@ -3208,66 +2329,6 @@ public class Dashboard implements LoginListener {
 		enableQueryButton();
 	}
 
-	protected boolean checkType(String value, String type) {
-		if (type == null)
-			return true;
-
-		try {
-			switch (type) {
-			case "URI":
-				if (value.equals(""))
-					return false;
-				URI check = new URI(value);
-				if (check.getScheme() == null)
-					return false;
-				break;
-			case "xsd:base64Binary":
-				Integer.parseInt(value, 16);
-				break;
-			case "xsd:boolean":
-				if (!(value.equals("true") || value.equals("false") || value.equals("0") || value.equals("1")))
-					return false;
-				break;
-			case "xsd:byte":
-				Byte.parseByte(value);
-				break;
-			case "xsd:date":
-			case "xsd:dateTime":
-			case "xsd:time":
-				DatatypeFactory.newInstance().newXMLGregorianCalendar(value);
-				break;
-			case "xsd:decimal":
-				new java.math.BigDecimal(value);
-				break;
-			case "xsd:double":
-				Double.parseDouble(value);
-				break;
-			case "xsd:float":
-				Float.parseFloat(value);
-				break;
-			case "xsd:int":
-				Integer.parseInt(value);
-				break;
-			case "xsd:integer":
-				new java.math.BigInteger(value);
-				break;
-			case "xsd:long":
-				Long.parseLong(value);
-				break;
-			case "xsd:short":
-				Short.parseShort(value);
-				break;
-			case "xsd:QName":
-				new javax.xml.namespace.QName(value);
-				break;
-			}
-		} catch (Exception e) {
-			return false;
-		}
-
-		return true;
-	}
-
 	protected void enableUpdateButton() {
 		updateButton.setEnabled(false);
 		if (updateSPARQL.getText().equals(""))
@@ -3278,7 +2339,7 @@ public class Dashboard implements LoginListener {
 				if (updateForcedBindings.getValueAt(row, 2) != null)
 					type = updateForcedBindings.getValueAt(row, 2).toString();
 				String value = updateForcedBindings.getValueAt(row, 1).toString();
-				if (!checkType(value, type))
+				if (!Utilities.checkType(value, type))
 					return;
 			}
 		}
@@ -3297,7 +2358,7 @@ public class Dashboard implements LoginListener {
 				if (queryForcedBindings.getValueAt(row, 2) != null)
 					type = queryForcedBindings.getValueAt(row, 2).toString();
 				String value = queryForcedBindings.getValueAt(row, 1).toString();
-				if (!checkType(value, type))
+				if (!Utilities.checkType(value, type))
 					return;
 			}
 		}
