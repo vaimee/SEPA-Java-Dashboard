@@ -70,6 +70,7 @@ import it.unibo.arces.wot.sepa.pattern.JSAP;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingValue;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingsRender;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.ForcedBindingsRenderer;
+import it.unibo.arces.wot.sepa.tools.dashboard.explorer.Explorer;
 import it.unibo.arces.wot.sepa.tools.dashboard.explorer.ExplorerTreeModel;
 import it.unibo.arces.wot.sepa.tools.dashboard.explorer.ExplorerTreeRenderer;
 import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.BindingsTableModel;
@@ -125,7 +126,6 @@ import javax.swing.JTextField;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JTree;
-import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import java.awt.event.ComponentAdapter;
@@ -227,6 +227,8 @@ public class Dashboard implements LoginListener {
 	private JCheckBox chckbxDatatype;
 	private JCheckBox chckbxQname;
 	private JLabel graphsEndpointLabel;
+	
+	private Explorer explorer;
 
 	JScrollPane scrollPane_5;
 	
@@ -270,6 +272,11 @@ public class Dashboard implements LoginListener {
 		initialize();
 
 		loadJSAP(null, true);
+		
+		explorer = new Explorer(explorerTree,  graphsTable,  sepaClient,  graphs,
+				 nRetry,  timeout,  navStack,  currentSubject,
+				 tableInstancePropertiesDataModel,  tableInstanceProperties,
+				 buttonStackBackward,  graphsEndpointLabel,  appProfile);
 	}
 
 	private void loadDashboardProperties() throws IOException {
@@ -1145,7 +1152,7 @@ public class Dashboard implements LoginListener {
 		explorerPanel.addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentShown(ComponentEvent e) {
-				onExplorerOpenTab(false);
+				explorer.onExplorerOpenTab(false);
 			}
 		});
 		mainTabs.addTab("Explorer", null, explorerPanel, null);
@@ -1252,7 +1259,7 @@ public class Dashboard implements LoginListener {
 		graphsTable.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				onExloperSelectGraph();
+				explorer.onExloperSelectGraph();
 			}
 		});
 
@@ -1287,6 +1294,22 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_7.gridx = 0;
 		gbc_scrollPane_7.gridy = 1;
 		panel.add(scrollPane_7, gbc_scrollPane_7);
+		
+		JPanel panel_9 = new JPanel();
+		chckbxQname = new JCheckBox("Qname");
+		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
+		gbc_chckbxQname.anchor = GridBagConstraints.EAST;
+		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxQname.gridx = 3;
+		gbc_chckbxQname.gridy = 0;
+		panel_9.add(chckbxQname, gbc_chckbxQname);
+		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		chckbxQname.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				onQnameCheckbox(e);
+			}
+		});
+		chckbxQname.setSelected(true);
 
 		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer(chckbxQname);
 		explorerTreeRenderer.setNamespaces(namespacesDM);
@@ -1296,7 +1319,7 @@ public class Dashboard implements LoginListener {
 		scrollPane_7.setViewportView(explorerTree);
 		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
 			public void valueChanged(TreeSelectionEvent e) {
-				onExplorerSelectTreeElement(e);
+				explorer.onExplorerSelectTreeElement(e);
 			}
 		});
 		explorerTree.setModel(new ExplorerTreeModel());
@@ -1317,7 +1340,7 @@ public class Dashboard implements LoginListener {
 		btnRefresh.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				onExplorerOpenTab(true);
+				explorer.onExplorerOpenTab(true);
 			}
 		});
 
@@ -1353,7 +1376,7 @@ public class Dashboard implements LoginListener {
 		buttonStackBackward.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				onExplorerBackButton(e);
+				explorer.onExplorerBackButton(e);
 			}
 		});
 		buttonStackBackward.setVisible(false);
@@ -1383,7 +1406,7 @@ public class Dashboard implements LoginListener {
 		tableInstanceProperties.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				onExplorerPropertiesNavigation(e);
+				explorer.onExplorerPropertiesNavigation(e);
 			}
 		});
 		tableInstanceProperties.getModel().addTableModelListener(new TableModelListener() {
@@ -1454,7 +1477,6 @@ public class Dashboard implements LoginListener {
 
 		scrollPane_8.setViewportView(tableInstanceProperties);
 
-		JPanel panel_9 = new JPanel();
 		GridBagConstraints gbc_panel_9 = new GridBagConstraints();
 		gbc_panel_9.anchor = GridBagConstraints.NORTH;
 		gbc_panel_9.insets = new Insets(0, 0, 5, 0);
@@ -1501,20 +1523,7 @@ public class Dashboard implements LoginListener {
 		});
 		chckbxDatatype.setSelected(true);
 
-		chckbxQname = new JCheckBox("Qname");
-		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
-		gbc_chckbxQname.anchor = GridBagConstraints.EAST;
-		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxQname.gridx = 3;
-		gbc_chckbxQname.gridy = 0;
-		panel_9.add(chckbxQname, gbc_chckbxQname);
-		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		chckbxQname.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				onQnameCheckbox(e);
-			}
-		});
-		chckbxQname.setSelected(true);
+		
 
 		JButton btnNewButton_3 = new JButton("CSV");
 		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
@@ -1683,287 +1692,6 @@ public class Dashboard implements LoginListener {
 		bindingsDM.fireTableDataChanged();
 		for (BindingsTableModel table : subscriptionResultsDM.values()) {
 			table.fireTableDataChanged();
-		}
-	}
-
-	protected void onExplorerSelectTreeElement(TreeSelectionEvent e) {
-		DefaultMutableTreeNode node = (DefaultMutableTreeNode) explorerTree.getLastSelectedPathComponent();
-		DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
-
-		if (node == null)
-			// Nothing is selected.
-			return;
-
-		if (node.isRoot())
-			return;
-
-		Bindings nodeInfo = (Bindings) node.getUserObject();
-
-		RDFTerm graph = new RDFTermURI(
-				(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
-
-		if (nodeInfo.getValue("class") != null) {
-			node.removeAllChildren();
-			model.reload();
-
-			Bindings forced = new Bindings();
-			forced.addBinding("top", new RDFTermURI(nodeInfo.getValue("class")));
-			forced.addBinding("graph", graph);
-
-			try {
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-
-				Response retResponse = sepaClient.query("___DASHBOARD_SUB_CLASSES", forced,
-						Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
-
-				if (retResponse.isError()) {
-					logger.error(retResponse);
-				} else {
-					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-						if (valueBindings.isURI("class"))
-							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
-					}
-				}
-
-				forced = new Bindings();
-				forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
-				forced.addBinding("graph", graph);
-
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-
-				retResponse = sepaClient.query("___DASHBOARD_INDIVIDUALS", forced, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
-				if (retResponse.isError()) {
-					logger.error(retResponse);
-				} else {
-					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-						if (valueBindings.isURI("instance") || valueBindings.isBNode("instance"))
-							model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
-					}
-				}
-
-			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-					| SEPABindingsException e1) {
-				logger.error(e1.getMessage());
-				if (logger.isTraceEnabled())
-					e1.printStackTrace();
-			}
-		} else if (nodeInfo.getValue("instance") != null) {
-			RDFTerm sub = new RDFTermURI(nodeInfo.getValue("instance"));
-
-			Bindings forced = new Bindings();
-			forced.addBinding("subject", sub);
-			forced.addBinding("graph", graph);
-
-			currentSubject.setText(sub.getValue());
-			navStack.clear();
-
-			Response retResponse;
-			try {
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-
-				retResponse = sepaClient.query("___DASHBOARD_URI_GRAPH", forced, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
-				if (retResponse.isError()) {
-					logger.error(retResponse);
-				} else {
-					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-					tableInstancePropertiesDataModel.clear();
-					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-						tableInstancePropertiesDataModel.addRow(valueBindings);
-					}
-				}
-			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-					| SEPABindingsException e1) {
-				logger.error(e1.getMessage());
-				if (logger.isTraceEnabled())
-					e1.printStackTrace();
-			}
-
-		}
-	}
-
-	protected void onExplorerBackButton(MouseEvent e) {
-		Bindings forced = new Bindings();
-		RDFTerm sub = navStack.get(navStack.size() - 1);
-		forced.addBinding("subject", sub);
-
-		RDFTerm graph = new RDFTermURI(
-				(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
-		forced.addBinding("graph", graph);
-
-		Response retResponse;
-		try {
-			if (sepaClient == null) {
-				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-						JOptionPane.INFORMATION_MESSAGE);
-				return;
-			}
-
-			retResponse = sepaClient.query("___DASHBOARD_URI_GRAPH", forced, Integer.parseInt(timeout.getText()),
-					Integer.parseInt(nRetry.getText()));
-			if (retResponse.isError()) {
-				logger.error(retResponse);
-			} else {
-				currentSubject.setText(sub.getValue());
-				navStack.remove(navStack.size() - 1);
-				if (navStack.isEmpty())
-					buttonStackBackward.setVisible(false);
-
-				QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-				tableInstancePropertiesDataModel.clear();
-				for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-					tableInstancePropertiesDataModel.addRow(valueBindings);
-				}
-			}
-		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
-			logger.error(e1.getMessage());
-			if (logger.isTraceEnabled())
-				e1.printStackTrace();
-		}
-	}
-
-	protected void onExplorerPropertiesNavigation(MouseEvent e) {
-		logger.debug(e);
-		if (e.getClickCount() == 2) {
-			if (!tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("URI")
-					&& !tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 2).equals("BNODE"))
-				return;
-
-			Bindings forced = new Bindings();
-			RDFTerm sub = new RDFTermURI(
-					(String) tableInstanceProperties.getValueAt(tableInstanceProperties.getSelectedRow(), 1));
-			forced.addBinding("subject", sub);
-			RDFTerm graph = new RDFTermURI(
-					(String) graphs.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
-			forced.addBinding("graph", graph);
-
-			Response retResponse;
-			try {
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-
-				retResponse = sepaClient.query("___DASHBOARD_URI_GRAPH", forced, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
-				if (retResponse.isError()) {
-					logger.error(retResponse);
-				} else {
-					RDFTerm back = new RDFTermURI(currentSubject.getText());
-					navStack.add(back);
-					currentSubject.setText(sub.getValue());
-					buttonStackBackward.setVisible(true);
-
-					QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-
-					tableInstancePropertiesDataModel.clear();
-					for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-						tableInstancePropertiesDataModel.addRow(valueBindings);
-					}
-				}
-			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-					| SEPABindingsException e1) {
-				logger.error(e1.getMessage());
-				if (logger.isTraceEnabled())
-					e1.printStackTrace();
-			}
-		}
-	}
-
-	protected void onExloperSelectGraph() {
-		int row = graphsTable.getSelectedRow();
-		String graphUri = (String) graphs.getValueAt(graphsTable.convertRowIndexToModel(row), 0);
-
-		Bindings forced = new Bindings();
-		forced.addBinding("graph", new RDFTermURI(graphUri));
-
-		tableInstancePropertiesDataModel.clear();
-		tableInstancePropertiesDataModel.fireTableDataChanged();
-
-		currentSubject.setText("");
-
-		try {
-			if (sepaClient == null) {
-				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-						JOptionPane.INFORMATION_MESSAGE);
-				return;
-			}
-
-			Response retResponse = sepaClient.query("___DASHBOARD_TOP_CLASSES", forced,
-					Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
-
-			if (retResponse.isError()) {
-				logger.error(retResponse);
-			} else {
-				DefaultTreeModel model = (DefaultTreeModel) explorerTree.getModel();
-				DefaultMutableTreeNode node = (DefaultMutableTreeNode) model.getRoot();
-
-				node.removeAllChildren();
-				model.reload();
-
-				QueryResponse resultsQueryResponse = (QueryResponse) retResponse;
-				for (Bindings valueBindings : resultsQueryResponse.getBindingsResults().getBindings()) {
-					model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
-				}
-			}
-		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
-			logger.error(e1.getMessage());
-			if (logger.isTraceEnabled())
-				e1.printStackTrace();
-		}
-	}
-
-	protected void onExplorerOpenTab(boolean refresh) {
-		if (sepaClient == null) {
-			JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-					JOptionPane.INFORMATION_MESSAGE);
-			graphs.clear();
-			return;
-		}
-
-		try {
-			graphsEndpointLabel.setText(appProfile.getHost());
-
-			if (!refresh && graphs.getRowCount() != 0)
-				return;
-
-			if (refresh)
-				graphs.clear();
-
-			Response retResponse = sepaClient.query("___DASHBOARD_GRAPHS", null, Integer.parseInt(timeout.getText()),
-					Integer.parseInt(nRetry.getText()));
-			if (retResponse.isError()) {
-				logger.error(retResponse);
-			} else {
-				QueryResponse response = (QueryResponse) retResponse;
-				for (Bindings bindings : response.getBindingsResults().getBindings()) {
-					graphs.addRow(bindings.getValue("graph"), Integer.parseInt(bindings.getValue("count")));
-				}
-			}
-		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
-			logger.error(e1.getMessage());
-			if (logger.isTraceEnabled())
-				e1.printStackTrace();
 		}
 	}
 
