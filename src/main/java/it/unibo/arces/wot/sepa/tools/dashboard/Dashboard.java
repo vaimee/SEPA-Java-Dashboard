@@ -164,7 +164,6 @@ public class Dashboard implements LoginListener {
 	private SortedListModel queryListDM = new SortedListModel();
 	private SortedListModel jsapListDM = new SortedListModel();
 
-	
 	private HashMap<String, BindingsTableModel> subscriptionResultsDM = new HashMap<String, BindingsTableModel>();
 	private HashMap<String, JLabel> subscriptionResultsLabels = new HashMap<String, JLabel>();
 	private HashMap<String, JTable> subscriptionResultsTables = new HashMap<String, JTable>();
@@ -227,11 +226,11 @@ public class Dashboard implements LoginListener {
 	private JCheckBox chckbxDatatype;
 	private JCheckBox chckbxQname;
 	private JLabel graphsEndpointLabel;
-	
+
 	private Explorer explorer;
 
 	JScrollPane scrollPane_5;
-	
+
 	private boolean signedIn = false;
 	private JTextField nRetry;
 
@@ -272,11 +271,6 @@ public class Dashboard implements LoginListener {
 		initialize();
 
 		loadJSAP(null, true);
-		
-		explorer = new Explorer(explorerTree,  graphsTable,  sepaClient,  graphs,
-				 nRetry,  timeout,  navStack,  currentSubject,
-				 tableInstancePropertiesDataModel,  tableInstanceProperties,
-				 buttonStackBackward,  graphsEndpointLabel,  appProfile);
 	}
 
 	private void loadDashboardProperties() throws IOException {
@@ -284,6 +278,7 @@ public class Dashboard implements LoginListener {
 		appProperties.load(in);
 	}
 
+	
 	protected boolean loadJSAP(String file, boolean load) {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
@@ -386,27 +381,8 @@ public class Dashboard implements LoginListener {
 			}
 		}
 
-		// Add explorer JSAP
-//		String dashboardJsapUrl;
-//		try {
-//			dashboardJsapUrl = Dashboard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-//		} catch (URISyntaxException e2) {
-//			logger.error(e2.getMessage());
-//			return false;
-//		}
-//
-//		
-//		
-//		if (dashboardJsapUrl == null) {
-//			JOptionPane.showMessageDialog(null, "File explorer.jsap not found",
-//					"Warning: Dashboard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath() is null",
-//					JOptionPane.INFORMATION_MESSAGE);
-//			return false;
-//		}
-
 		try {
 			appProfile.read(getClass().getClassLoader().getResourceAsStream("explorer.jsap"));
-			// appProfile.read(dashboardJsapUrl + "explorer.jsap");
 		} catch (SEPAPropertiesException | SEPASecurityException e2) {
 			logger.error(e2.getMessage());
 			return false;
@@ -436,12 +412,6 @@ public class Dashboard implements LoginListener {
 
 		// Security
 		if (appProfile.isSecure()) {
-//			try {
-//				oauth = new OAuthProperties(appProfile.getFileName());
-//			} catch (SEPAPropertiesException | SEPASecurityException e1) {
-//				logger.error(e1.getMessage());
-//				return false;
-//			}
 
 			login = new Login(appProfile.getAuthenticationProperties(), this, frmSepaDashboard);// ,clientIDString,clientSecretString);
 			login.setVisible(true);
@@ -454,6 +424,10 @@ public class Dashboard implements LoginListener {
 				return false;
 			}
 		}
+		
+		explorer = new Explorer(explorerTree, graphsTable, sepaClient, graphs, nRetry, timeout, navStack,
+				currentSubject, tableInstancePropertiesDataModel, tableInstanceProperties, buttonStackBackward,
+				graphsEndpointLabel, appProfile);
 
 		return true;
 	}
@@ -480,36 +454,69 @@ public class Dashboard implements LoginListener {
 				return false;
 			}
 		};
-		propertiesDM.setColumnIdentifiers(propertiesHeader);
+		propertiesDM.setColumnIdentifiers(propertiesHeader);	
 
+		JPanel panel_8 = new JPanel();
+		JPanel updateGraphs = new JPanel();
+		JPanel queryGraphs = new JPanel();
+		JPanel panel_3 = new JPanel();
+		
+		JButton btnLoadXmlProfile = new JButton("Load JSAP");
+		JButton btnNewButton_2 = new JButton("Register");
+
+		JLabel label_2 = new JLabel("using-graph-uri:");
+		JLabel label_4 = new JLabel("using-named-graph-uri:");
+		JLabel label_8 = new JLabel("default-graph-uri:");
+		JLabel label_14 = new JLabel("QUERIES");
+
+		GridBagLayout gbl_panel_8 = new GridBagLayout();
+		GridBagLayout gridBagLayout = new GridBagLayout();
+		GridBagLayout gbl_sparqlTab = new GridBagLayout();
+		GridBagLayout gbl_updateGraphs = new GridBagLayout();
+		GridBagLayout gbl_queryGraphs = new GridBagLayout();
+
+		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
+		GridBagConstraints gbc_btnNewButton_2 = new GridBagConstraints();
+		GridBagConstraints gbc_btnLogin = new GridBagConstraints();
+		GridBagConstraints gbc_panel_8 = new GridBagConstraints();
+		GridBagConstraints gbc_btnLoadXmlProfile = new GridBagConstraints();
+		GridBagConstraints gbc_mainTabs = new GridBagConstraints();
+		GridBagConstraints gbc_updateGraphs = new GridBagConstraints();
+		GridBagConstraints gbc_updateURL = new GridBagConstraints();
+		GridBagConstraints gbc_updateUsingGraphURI = new GridBagConstraints();
+		GridBagConstraints gbc_label_2 = new GridBagConstraints();
+		GridBagConstraints gbc_label_4 = new GridBagConstraints();
+		GridBagConstraints gbc_updateUsingNamedGraphURI = new GridBagConstraints();
+		GridBagConstraints gbc_queryGraphs = new GridBagConstraints();
+		GridBagConstraints gbc_queryURL = new GridBagConstraints();
+		GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
+		GridBagConstraints gbc_label_8 = new GridBagConstraints();
+		GridBagConstraints gbc_defaultGraphURI = new GridBagConstraints();
+		
 		frmSepaDashboard = new JFrame();
 		frmSepaDashboard.setFont(new Font("Montserrat", Font.BOLD, 10));
 		frmSepaDashboard.setTitle(title);
 		frmSepaDashboard.setBounds(100, 100, 925, 768);
 		frmSepaDashboard.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		GridBagLayout gridBagLayout = new GridBagLayout();
+
 		gridBagLayout.columnWidths = new int[] { 465, 0 };
 		gridBagLayout.rowHeights = new int[] { 0, 391, -36, 97, 0 };
 		gridBagLayout.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gridBagLayout.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
 		frmSepaDashboard.getContentPane().setLayout(gridBagLayout);
 
-		JPanel panel_8 = new JPanel();
-		GridBagConstraints gbc_panel_8 = new GridBagConstraints();
 		gbc_panel_8.insets = new Insets(0, 0, 5, 0);
 		gbc_panel_8.fill = GridBagConstraints.BOTH;
 		gbc_panel_8.gridx = 0;
 		gbc_panel_8.gridy = 0;
 		frmSepaDashboard.getContentPane().add(panel_8, gbc_panel_8);
-		GridBagLayout gbl_panel_8 = new GridBagLayout();
+
 		gbl_panel_8.columnWidths = new int[] { 0, 0, 0, 0, 0 };
 		gbl_panel_8.rowHeights = new int[] { 0, 0 };
 		gbl_panel_8.columnWeights = new double[] { 0.0, 0.0, 1.0, 0.0, Double.MIN_VALUE };
 		gbl_panel_8.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		panel_8.setLayout(gbl_panel_8);
 
-		JButton btnLoadXmlProfile = new JButton("Load JSAP");
-		GridBagConstraints gbc_btnLoadXmlProfile = new GridBagConstraints();
 		gbc_btnLoadXmlProfile.insets = new Insets(0, 0, 0, 5);
 		gbc_btnLoadXmlProfile.anchor = GridBagConstraints.WEST;
 		gbc_btnLoadXmlProfile.gridx = 0;
@@ -520,15 +527,13 @@ public class Dashboard implements LoginListener {
 		btnLoadXmlProfile.setBackground(Color.WHITE);
 
 		chckbxMerge = new JCheckBox("merge");
-		GridBagConstraints gbc_chckbxMerge = new GridBagConstraints();
+
 		gbc_chckbxMerge.insets = new Insets(0, 0, 0, 5);
 		gbc_chckbxMerge.gridx = 1;
 		gbc_chckbxMerge.gridy = 0;
 		panel_8.add(chckbxMerge, gbc_chckbxMerge);
 		chckbxMerge.setFont(new Font("Montserrat", Font.PLAIN, 11));
 
-		JButton btnNewButton_2 = new JButton("Register");
-		GridBagConstraints gbc_btnNewButton_2 = new GridBagConstraints();
 		gbc_btnNewButton_2.anchor = GridBagConstraints.EAST;
 		gbc_btnNewButton_2.insets = new Insets(0, 0, 0, 5);
 		gbc_btnNewButton_2.gridx = 2;
@@ -536,7 +541,7 @@ public class Dashboard implements LoginListener {
 		panel_8.add(btnNewButton_2, gbc_btnNewButton_2);
 
 		btnLogin = new JButton("Sign In");
-		GridBagConstraints gbc_btnLogin = new GridBagConstraints();
+
 		gbc_btnLogin.anchor = GridBagConstraints.EAST;
 		gbc_btnLogin.gridx = 3;
 		gbc_btnLogin.gridy = 0;
@@ -587,11 +592,10 @@ public class Dashboard implements LoginListener {
 				}
 			}
 		});
-		// btnLogin.setEnabled(false);
 
 		mainTabs = new JTabbedPane(JTabbedPane.TOP);
 		mainTabs.setFont(new Font("Montserrat", Font.PLAIN, 13));
-		GridBagConstraints gbc_mainTabs = new GridBagConstraints();
+
 		gbc_mainTabs.insets = new Insets(0, 0, 5, 0);
 		gbc_mainTabs.fill = GridBagConstraints.BOTH;
 		gbc_mainTabs.gridx = 0;
@@ -601,23 +605,22 @@ public class Dashboard implements LoginListener {
 		sparqlTab = new Panel();
 		mainTabs.addTab("SPARQL", null, sparqlTab, null);
 		mainTabs.setEnabledAt(0, true);
-		GridBagLayout gbl_sparqlTab = new GridBagLayout();
+
 		gbl_sparqlTab.columnWidths = new int[] { 420, 0, 0 };
 		gbl_sparqlTab.rowHeights = new int[] { 0, 87, 91, 29, 188, 0 };
 		gbl_sparqlTab.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
 		gbl_sparqlTab.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 1.0, Double.MIN_VALUE };
 		sparqlTab.setLayout(gbl_sparqlTab);
 
-		JPanel updateGraphs = new JPanel();
 		updateGraphs.setBorder(new LineBorder(new Color(0, 0, 0), 1, true));
-		GridBagConstraints gbc_updateGraphs = new GridBagConstraints();
+
 		gbc_updateGraphs.anchor = GridBagConstraints.NORTH;
 		gbc_updateGraphs.insets = new Insets(0, 0, 5, 5);
 		gbc_updateGraphs.fill = GridBagConstraints.HORIZONTAL;
 		gbc_updateGraphs.gridx = 0;
 		gbc_updateGraphs.gridy = 0;
 		sparqlTab.add(updateGraphs, gbc_updateGraphs);
-		GridBagLayout gbl_updateGraphs = new GridBagLayout();
+
 		gbl_updateGraphs.columnWidths = new int[] { 0, 0, 0 };
 		gbl_updateGraphs.rowHeights = new int[] { 0, 0, 0, 0 };
 		gbl_updateGraphs.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
@@ -627,17 +630,16 @@ public class Dashboard implements LoginListener {
 		updateURL = new JLabel("-");
 		updateURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		updateURL.setFont(new Font("Montserrat", Font.BOLD, 12));
-		GridBagConstraints gbc_updateURL = new GridBagConstraints();
+
 		gbc_updateURL.gridwidth = 2;
 		gbc_updateURL.insets = new Insets(0, 0, 5, 0);
 		gbc_updateURL.gridx = 0;
 		gbc_updateURL.gridy = 0;
 		updateGraphs.add(updateURL, gbc_updateURL);
 
-		JLabel label_2 = new JLabel("using-graph-uri:");
 		label_2.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_2.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		GridBagConstraints gbc_label_2 = new GridBagConstraints();
+
 		gbc_label_2.anchor = GridBagConstraints.EAST;
 		gbc_label_2.insets = new Insets(0, 0, 5, 5);
 		gbc_label_2.gridx = 0;
@@ -647,17 +649,16 @@ public class Dashboard implements LoginListener {
 		usingGraphURI = new JLabel("-");
 		usingGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		usingGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
-		GridBagConstraints gbc_updateUsingGraphURI = new GridBagConstraints();
+
 		gbc_updateUsingGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_updateUsingGraphURI.insets = new Insets(0, 0, 5, 0);
 		gbc_updateUsingGraphURI.gridx = 1;
 		gbc_updateUsingGraphURI.gridy = 1;
 		updateGraphs.add(usingGraphURI, gbc_updateUsingGraphURI);
 
-		JLabel label_4 = new JLabel("using-named-graph-uri:");
 		label_4.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_4.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		GridBagConstraints gbc_label_4 = new GridBagConstraints();
+
 		gbc_label_4.anchor = GridBagConstraints.EAST;
 		gbc_label_4.insets = new Insets(0, 0, 0, 5);
 		gbc_label_4.gridx = 0;
@@ -667,22 +668,21 @@ public class Dashboard implements LoginListener {
 		usingNamedGraphURI = new JLabel("-");
 		usingNamedGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		usingNamedGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
-		GridBagConstraints gbc_updateUsingNamedGraphURI = new GridBagConstraints();
+
 		gbc_updateUsingNamedGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_updateUsingNamedGraphURI.gridx = 1;
 		gbc_updateUsingNamedGraphURI.gridy = 2;
 		updateGraphs.add(usingNamedGraphURI, gbc_updateUsingNamedGraphURI);
 
-		JPanel queryGraphs = new JPanel();
 		queryGraphs.setBorder(new LineBorder(new Color(0, 0, 0), 1, true));
-		GridBagConstraints gbc_queryGraphs = new GridBagConstraints();
+
 		gbc_queryGraphs.anchor = GridBagConstraints.NORTH;
 		gbc_queryGraphs.insets = new Insets(0, 0, 5, 0);
 		gbc_queryGraphs.fill = GridBagConstraints.HORIZONTAL;
 		gbc_queryGraphs.gridx = 1;
 		gbc_queryGraphs.gridy = 0;
 		sparqlTab.add(queryGraphs, gbc_queryGraphs);
-		GridBagLayout gbl_queryGraphs = new GridBagLayout();
+
 		gbl_queryGraphs.columnWidths = new int[] { 228, 207, 0 };
 		gbl_queryGraphs.rowHeights = new int[] { 0, 0, 0, 0 };
 		gbl_queryGraphs.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
@@ -692,7 +692,7 @@ public class Dashboard implements LoginListener {
 		queryURL = new JLabel("-");
 		queryURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		queryURL.setFont(new Font("Montserrat", Font.BOLD, 12));
-		GridBagConstraints gbc_queryURL = new GridBagConstraints();
+
 		gbc_queryURL.insets = new Insets(0, 0, 5, 5);
 		gbc_queryURL.gridx = 0;
 		gbc_queryURL.gridy = 0;
@@ -701,16 +701,15 @@ public class Dashboard implements LoginListener {
 		subscribeURL = new JLabel("-");
 		subscribeURL.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		subscribeURL.setFont(new Font("Montserrat", Font.BOLD, 12));
-		GridBagConstraints gbc_subscribeURL = new GridBagConstraints();
+
 		gbc_subscribeURL.insets = new Insets(0, 0, 5, 0);
 		gbc_subscribeURL.gridx = 1;
 		gbc_subscribeURL.gridy = 0;
 		queryGraphs.add(subscribeURL, gbc_subscribeURL);
 
-		JLabel label_8 = new JLabel("default-graph-uri:");
 		label_8.setFont(new Font("Montserrat", Font.BOLD, 12));
 		label_8.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
-		GridBagConstraints gbc_label_8 = new GridBagConstraints();
+
 		gbc_label_8.anchor = GridBagConstraints.EAST;
 		gbc_label_8.insets = new Insets(0, 0, 5, 5);
 		gbc_label_8.gridx = 0;
@@ -720,7 +719,7 @@ public class Dashboard implements LoginListener {
 		defaultGraphURI = new JLabel("-");
 		defaultGraphURI.setForeground(UIManager.getColor("ComboBox.buttonDarkShadow"));
 		defaultGraphURI.setFont(new Font("Montserrat", Font.BOLD, 12));
-		GridBagConstraints gbc_defaultGraphURI = new GridBagConstraints();
+		
 		gbc_defaultGraphURI.anchor = GridBagConstraints.WEST;
 		gbc_defaultGraphURI.insets = new Insets(0, 0, 5, 0);
 		gbc_defaultGraphURI.gridx = 1;
@@ -798,7 +797,7 @@ public class Dashboard implements LoginListener {
 		updateList.setModel(updateListDM);
 		scrollPane.setViewportView(updateList);
 
-		JPanel panel_3 = new JPanel();
+		
 		updates.setRightComponent(panel_3);
 		GridBagLayout gbl_panel_3 = new GridBagLayout();
 		gbl_panel_3.columnWidths = new int[] { 101, 0 };
@@ -864,7 +863,6 @@ public class Dashboard implements LoginListener {
 		gbl_panel_4.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
 		panel_4.setLayout(gbl_panel_4);
 
-		JLabel label_14 = new JLabel("QUERIES");
 		label_14.setForeground(Color.BLACK);
 		label_14.setFont(new Font("Montserrat", Font.BOLD, 14));
 		GridBagConstraints gbc_label_14 = new GridBagConstraints();
@@ -1118,7 +1116,6 @@ public class Dashboard implements LoginListener {
 				JComponent.WHEN_FOCUSED);
 		bindingsResultsTable.getTableHeader().setBackground(Color.WHITE);
 
-
 		results.setViewportView(bindingsResultsTable);
 		bindingsRender.setNamespaces(namespacesDM);
 
@@ -1149,12 +1146,7 @@ public class Dashboard implements LoginListener {
 		scrollPane_4.setViewportView(namespacesTable);
 
 		JPanel explorerPanel = new JPanel();
-		explorerPanel.addComponentListener(new ComponentAdapter() {
-			@Override
-			public void componentShown(ComponentEvent e) {
-				explorer.onExplorerOpenTab(false);
-			}
-		});
+		
 		mainTabs.addTab("Explorer", null, explorerPanel, null);
 		GridBagLayout gbl_explorerPanel = new GridBagLayout();
 		gbl_explorerPanel.columnWidths = new int[] { 0, 0, 0 };
@@ -1187,12 +1179,11 @@ public class Dashboard implements LoginListener {
 				int[] rows = graphsTable.getSelectedRows();
 				if (rows.length > 0) {
 					int index = graphsTable.convertRowIndexToModel(rows[0]);
-					
+
 					int dialogResult = JOptionPane.showConfirmDialog(null,
-							"Are you sure? " + graphs.getValueAt(index, 0).toString() + " will be deleted!",
-							"Warning", JOptionPane.YES_NO_OPTION);
+							"Are you sure? " + graphs.getValueAt(index, 0).toString() + " will be deleted!", "Warning",
+							JOptionPane.YES_NO_OPTION);
 					if (dialogResult == JOptionPane.YES_OPTION) {
-//						for (int i : rows) {
 						Bindings forced = new Bindings();
 						forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(index, 0).toString()));
 						try {
@@ -1201,8 +1192,8 @@ public class Dashboard implements LoginListener {
 										"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
 								return;
 							}
-							Response ret = sepaClient.update("___DASHBOARD_DROP_GRAPH", forced, Integer.parseInt(timeout.getText()),
-									Integer.parseInt(nRetry.getText()));
+							Response ret = sepaClient.update("___DASHBOARD_DROP_GRAPH", forced,
+									Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 							if (ret.isUpdateResponse()) {
 								graphs.removeRow(graphs.getValueAt(index, 0).toString());
 							}
@@ -1212,12 +1203,7 @@ public class Dashboard implements LoginListener {
 							if (logger.isTraceEnabled())
 								e1.printStackTrace();
 						}
-						
-						//onExplorerOpenTab(true);
 					}
-
-					
-//					}
 				}
 			}
 		});
@@ -1242,26 +1228,14 @@ public class Dashboard implements LoginListener {
 		graphsTable.setRowSelectionAllowed(false);
 		graphsTable.setFont(new Font("Montserrat", Font.PLAIN, 12));
 		TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(graphsTable.getModel());
-//		Comparator<Integer> compare = new Comparator<Integer>() {
-//			@Override
-//			public int compare(Integer o1, Integer o2) {
-//				return o1.compareTo(o2);
-//			}
-//		};
-//		sorter.setComparator(1, compare);
+
 		graphsTable.setRowSorter(sorter);
 		graphsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		graphsTable.setCellSelectionEnabled(true);
 		graphsTable.getTableHeader().setBackground(Color.WHITE);
 
-		// graphsTable.setAutoCreateRowSorter(true);
 		scrollPane_9.setViewportView(graphsTable);
-		graphsTable.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				explorer.onExloperSelectGraph();
-			}
-		});
+		
 
 		JSplitPane splitPane = new JSplitPane();
 		GridBagConstraints gbc_splitPane = new GridBagConstraints();
@@ -1294,38 +1268,8 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_7.gridx = 0;
 		gbc_scrollPane_7.gridy = 1;
 		panel.add(scrollPane_7, gbc_scrollPane_7);
-		
+
 		JPanel panel_9 = new JPanel();
-		chckbxQname = new JCheckBox("Qname");
-		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
-		gbc_chckbxQname.anchor = GridBagConstraints.EAST;
-		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxQname.gridx = 3;
-		gbc_chckbxQname.gridy = 0;
-		panel_9.add(chckbxQname, gbc_chckbxQname);
-		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		chckbxQname.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				onQnameCheckbox(e);
-			}
-		});
-		chckbxQname.setSelected(true);
-
-		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer(chckbxQname);
-		explorerTreeRenderer.setNamespaces(namespacesDM);
-
-		explorerTree = new JTree();
-		explorerTree.setFont(new Font("Montserrat", Font.PLAIN, 12));
-		scrollPane_7.setViewportView(explorerTree);
-		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
-			public void valueChanged(TreeSelectionEvent e) {
-				explorer.onExplorerSelectTreeElement(e);
-			}
-		});
-		explorerTree.setModel(new ExplorerTreeModel());
-		explorerTree.setCellRenderer(explorerTreeRenderer);
-		ToolTipManager.sharedInstance().registerComponent(explorerTree);
-
 		JPanel panel_1 = new JPanel();
 		splitPane.setRightComponent(panel_1);
 		GridBagLayout gbl_panel_1 = new GridBagLayout();
@@ -1337,12 +1281,6 @@ public class Dashboard implements LoginListener {
 
 		JButton btnRefresh = new JButton("Refresh");
 		btnRefresh.setFont(new Font("Montserrat", Font.BOLD, 13));
-		btnRefresh.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				explorer.onExplorerOpenTab(true);
-			}
-		});
 
 		JLabel lblNewLabel_1 = new JLabel("Properties");
 		lblNewLabel_1.setFont(new Font("Montserrat", Font.BOLD, 13));
@@ -1373,12 +1311,7 @@ public class Dashboard implements LoginListener {
 		gbc_buttonStackBackward.gridx = 0;
 		gbc_buttonStackBackward.gridy = 2;
 		panel_1.add(buttonStackBackward, gbc_buttonStackBackward);
-		buttonStackBackward.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				explorer.onExplorerBackButton(e);
-			}
-		});
+		
 		buttonStackBackward.setVisible(false);
 
 		JLabel lblProperties = new JLabel(
@@ -1398,17 +1331,12 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_8.gridx = 0;
 		gbc_scrollPane_8.gridy = 4;
 		panel_1.add(scrollPane_8, gbc_scrollPane_8);
-		
-		tableInstancePropertiesDataModel = new InstanceTableModel(sepaClient, timeout, nRetry, graphs, lblProperties, graphsTable);
+
+		tableInstancePropertiesDataModel = new InstanceTableModel(sepaClient, timeout, nRetry, graphs, lblProperties,
+				graphsTable);
 		tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
 		tableInstanceProperties.getTableHeader().setBackground(Color.WHITE);
 		tableInstanceProperties.setFont(new Font("Montserrat", Font.PLAIN, 12));
-		tableInstanceProperties.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				explorer.onExplorerPropertiesNavigation(e);
-			}
-		});
 		tableInstanceProperties.getModel().addTableModelListener(new TableModelListener() {
 
 			public void tableChanged(TableModelEvent e) {
@@ -1522,8 +1450,20 @@ public class Dashboard implements LoginListener {
 			}
 		});
 		chckbxDatatype.setSelected(true);
-
-		
+		chckbxQname = new JCheckBox("Qname");
+		GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
+		gbc_chckbxQname.anchor = GridBagConstraints.EAST;
+		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
+		gbc_chckbxQname.gridx = 3;
+		gbc_chckbxQname.gridy = 0;
+		panel_9.add(chckbxQname, gbc_chckbxQname);
+		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
+		chckbxQname.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				onQnameCheckbox(e);
+			}
+		});
+		chckbxQname.setSelected(true);
 
 		JButton btnNewButton_3 = new JButton("CSV");
 		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
@@ -1580,56 +1520,6 @@ public class Dashboard implements LoginListener {
 					Rectangle control = panel_9.getBounds();
 					control.y += textArea.getHeight();
 					panel_9.setBounds(control);
-
-//					Rectangle top = panel_8.getBounds();
-//					Rectangle main = mainTabs.getBounds();
-//					Rectangle control = panel_9.getBounds();
-//					Rectangle info = scrollPane_5.getBounds();
-//					
-//					main.height += 20;
-//					//control.y = top.height + main.height;
-//					//info.y = top.height + main.height + control.height + info.height;
-//					info.height = 0;
-//					
-//					scrollPane_5.setBounds(info);
-//					mainTabs.setBounds(main);
-					// panel_9.setBounds(control);
-					// scrollPane_5.setBounds(info);
-
-					// info.y += info.height;
-					// scrollPane_5.setBounds(info);
-
-					// Rectangle control = panel_9.getBounds();
-					// control.y += info.height;
-					// panel_9.setBounds(control);
-
-					// Rectangle info = textArea.getBounds();
-
-//					int logH = info.height;
-//					
-//					b.height += logH;
-
-					// control.y += logH;
-					// info.y += logH;
-					// mainTabs.setBounds(b);
-					// panel_9.setBounds(control);
-					// scrollPane_9.setBounds(info);
-					// scrollPane_5.setVisible(false);
-
-					// info.height = 0;
-					// info.y += 10;
-					// scrollPane_5.setBounds(info);
-					// b.y += 10;
-					// scrollPane_9.setBounds(b);
-					// scrollPane_5.setVisible(false);
-
-					// Rectangle b = panel_9.getBounds();
-					// b.y += info.height;
-					// panel_9.setBounds(b);
-					// Rectangle b = infoPanel.getBounds();
-					// b.y += b.height;
-					// infoPanel.setBounds(b);
-
 				} else {
 					scrollPane_5.setVisible(true);
 
@@ -1640,25 +1530,6 @@ public class Dashboard implements LoginListener {
 					Rectangle control = panel_9.getBounds();
 					control.y -= textArea.getHeight();
 					panel_9.setBounds(control);
-
-//					Rectangle info = scrollPane_5.getBounds();
-//					info.y -= info.height;
-//					//scrollPane_5.setBounds(info);
-//					
-//					Rectangle control = panel_9.getBounds();
-//					control.y -= info.height;
-//					panel_9.setBounds(control);
-
-					// Rectangle info = textArea.getBounds();
-
-//					int logH = info.height;
-//					
-//					b.height += logH;
-
-					// Rectangle b = infoPanel.getBounds();
-					// b.y -= b.height;
-					// infoPanel.setBounds(b);
-					// scrollPane_5.setVisible(true);
 				}
 			}
 		});
@@ -1673,10 +1544,61 @@ public class Dashboard implements LoginListener {
 		gbc_chckbxNewCheckBox.gridx = 0;
 		gbc_chckbxNewCheckBox.gridy = 0;
 		panel_9.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
+
+		handler = new DashboardHandler(subscriptionResultsDM, subscriptionResultsLabels, subscriptionResultsTables,
+				queryList, querySPARQL, sepaClient, timeout, nRetry, bindingsRender, subscriptionsPanel, mainTabs);
 		
-		handler = new DashboardHandler(subscriptionResultsDM,
-				subscriptionResultsLabels, subscriptionResultsTables,
-				queryList, querySPARQL,  sepaClient,  timeout,  nRetry, bindingsRender, subscriptionsPanel,  mainTabs);
+		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer(chckbxQname);
+		explorerTreeRenderer.setNamespaces(namespacesDM);
+		
+		explorerTree = new JTree();
+		explorerTree.setFont(new Font("Montserrat", Font.PLAIN, 12));
+		scrollPane_7.setViewportView(explorerTree);
+		
+		explorerTree.setModel(new ExplorerTreeModel());
+		explorerTree.setCellRenderer(explorerTreeRenderer);
+		ToolTipManager.sharedInstance().registerComponent(explorerTree);
+		
+		explorerPanel.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentShown(ComponentEvent e) {
+				explorer.onExplorerOpenTab(false);
+			}
+		});
+	
+		graphsTable.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				explorer.onExloperSelectGraph();
+			}
+		});
+
+		buttonStackBackward.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				explorer.onExplorerBackButton(e);
+			}
+		});
+		
+		tableInstanceProperties.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				explorer.onExplorerPropertiesNavigation(e);
+			}
+		});
+		
+		btnRefresh.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				explorer.onExplorerOpenTab(true);
+			}
+		});
+		
+		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
+			public void valueChanged(TreeSelectionEvent e) {
+				explorer.onExplorerSelectTreeElement(e);
+			}
+		});
 	}
 
 	protected void onQnameCheckbox(ChangeEvent e) {
@@ -1914,7 +1836,7 @@ public class Dashboard implements LoginListener {
 				queryInfo.setText(String.format("Results: %d (%d ms)", results.getBindingsResults().size(),
 						(stop.toEpochMilli() - start.toEpochMilli())));
 				bindingsDM.clear();
-				bindingsDM.setAddedResults(subscriptionResultsTables,results.getBindingsResults(), null);
+				bindingsDM.setAddedResults(subscriptionResultsTables, results.getBindingsResults(), null);
 			}
 		} catch (NumberFormatException | SEPAProtocolException | SEPASecurityException | IOException e) {
 			logger.error(e.getMessage());

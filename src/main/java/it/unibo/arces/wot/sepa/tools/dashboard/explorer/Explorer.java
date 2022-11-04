@@ -16,8 +16,6 @@ import javax.swing.tree.DefaultTreeModel;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.appender.rolling.action.IfAccumulatedFileCount;
-import org.apache.logging.log4j.core.jackson.ContextDataAsEntryListSerializer;
 
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
