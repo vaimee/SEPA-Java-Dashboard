@@ -6,7 +6,6 @@ import java.util.ArrayList;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTree;
@@ -18,16 +17,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPAProtocolException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
 import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
 import it.unibo.arces.wot.sepa.commons.response.Response;
 import it.unibo.arces.wot.sepa.commons.sparql.Bindings;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTerm;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermURI;
-import it.unibo.arces.wot.sepa.pattern.GenericClient;
-import it.unibo.arces.wot.sepa.pattern.JSAP;
+import it.unibo.arces.wot.sepa.tools.dashboard.DashboadApp;
 import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.GraphTableModel;
 import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.InstanceTableModel;
 
@@ -36,35 +31,28 @@ public class Explorer {
 
 	private JTree explorerTree;
 	private JTable graphsTable;
-	private GenericClient sepaClient;
+	private DashboadApp sepaClient;
 	private GraphTableModel graphs;
-	private JTextField nRetry;
-	private JTextField timeout;
 	private ArrayList<RDFTerm> navStack;
 	private JLabel currentSubject;
 	private InstanceTableModel tableInstancePropertiesDataModel;
 	private JTable tableInstanceProperties;
 	private JButton buttonStackBackward;
 	private JLabel graphsEndpointLabel;
-	private JSAP appProfile;
 
-	public Explorer(JTree explorerTree, JTable graphsTable, GenericClient sepaClient, GraphTableModel graphs,
+	public Explorer(JTree explorerTree, JTable graphsTable, GraphTableModel graphs,
 			JTextField nRetry, JTextField timeout, ArrayList<RDFTerm> navStack, JLabel currentSubject,
 			InstanceTableModel tableInstancePropertiesDataModel, JTable tableInstanceProperties,
-			JButton buttonStackBackward, JLabel graphsEndpointLabel, JSAP appProfile) {
+			JButton buttonStackBackward, JLabel graphsEndpointLabel) {
 		this.explorerTree = explorerTree;
 		this.graphsTable = graphsTable;
-		this.sepaClient = sepaClient;
 		this.graphs = graphs;
-		this.nRetry = nRetry;
-		this.timeout = timeout;
 		this.navStack = navStack;
 		this.currentSubject = currentSubject;
 		this.tableInstancePropertiesDataModel = tableInstancePropertiesDataModel;
 		this.tableInstanceProperties = tableInstanceProperties;
 		this.buttonStackBackward = buttonStackBackward;
 		this.graphsEndpointLabel = graphsEndpointLabel;
-		this.appProfile = appProfile;
 	}
 
 	public void onExplorerSelectTreeElement(TreeSelectionEvent e) {
@@ -92,14 +80,13 @@ public class Explorer {
 			forced.addBinding("graph", graph);
 
 			try {
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
+//				if (sepaClient == null) {
+//					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//							JOptionPane.INFORMATION_MESSAGE);
+//					return;
+//				}
 
-				Response retResponse = sepaClient.query("___DASHBOARD_SUB_CLASSES", forced,
-						Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
+				Response retResponse = sepaClient.subClasses(forced);
 
 				if (retResponse.isError()) {
 					logger.error(retResponse);
@@ -116,14 +103,13 @@ public class Explorer {
 				forced.addBinding("class", new RDFTermURI(nodeInfo.getValue("class")));
 				forced.addBinding("graph", graph);
 
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
+//				if (sepaClient == null) {
+//					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//							JOptionPane.INFORMATION_MESSAGE);
+//					return;
+//				}
 
-				retResponse = sepaClient.query("___DASHBOARD_INDIVIDUALS", forced, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
+				retResponse = sepaClient.individuals(forced);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
 				} else {
@@ -135,8 +121,7 @@ public class Explorer {
 					}
 				}
 
-			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-					| SEPABindingsException e1) {
+			} catch (SEPABindingsException e1) {
 				logger.error(e1.getMessage());
 				if (logger.isTraceEnabled())
 					e1.printStackTrace();
@@ -156,15 +141,14 @@ public class Explorer {
 					navStack.clear();
 
 					Response retResponse;
-					try {
-						if (sepaClient == null) {
-							JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-									JOptionPane.INFORMATION_MESSAGE);
-							return;
-						}
+//					try {
+//						if (sepaClient == null) {
+//							JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//									JOptionPane.INFORMATION_MESSAGE);
+//							return;
+//						}
 
-						retResponse = sepaClient.query("___DASHBOARD_BNODE_GRAPH", forced,
-								Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
+						retResponse = sepaClient.bnodeGraph(forced);
 						if (retResponse.isError()) {
 							logger.error(retResponse);
 						} else {
@@ -176,12 +160,12 @@ public class Explorer {
 									tableInstancePropertiesDataModel.addRow(valueBindings);
 							}
 						}
-					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-							| SEPABindingsException e1) {
-						logger.error(e1.getMessage());
-						if (logger.isTraceEnabled())
-							e1.printStackTrace();
-					}
+//					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+//							| SEPABindingsException e1) {
+//						logger.error(e1.getMessage());
+//						if (logger.isTraceEnabled())
+//							e1.printStackTrace();
+//					}
 
 				} else {
 					RDFTerm sub = new RDFTermURI(nodeInfo.getValue("instance"));
@@ -194,15 +178,14 @@ public class Explorer {
 					navStack.clear();
 
 					Response retResponse;
-					try {
-						if (sepaClient == null) {
-							JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-									JOptionPane.INFORMATION_MESSAGE);
-							return;
-						}
+//					try {
+//						if (sepaClient == null) {
+//							JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//									JOptionPane.INFORMATION_MESSAGE);
+//							return;
+//						}
 
-						retResponse = sepaClient.query("___DASHBOARD_URI_GRAPH", forced,
-								Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
+						retResponse = sepaClient.uriGraph(forced);
 						if (retResponse.isError()) {
 							logger.error(retResponse);
 						} else {
@@ -213,12 +196,12 @@ public class Explorer {
 								tableInstancePropertiesDataModel.addRow(valueBindings);
 							}
 						}
-					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-							| SEPABindingsException e1) {
-						logger.error(e1.getMessage());
-						if (logger.isTraceEnabled())
-							e1.printStackTrace();
-					}
+//					} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+//							| SEPABindingsException e1) {
+//						logger.error(e1.getMessage());
+//						if (logger.isTraceEnabled())
+//							e1.printStackTrace();
+//					}
 				}
 			} catch (HeadlessException e1) {
 				logger.error(e1.getMessage());
@@ -240,15 +223,14 @@ public class Explorer {
 		forced.addBinding("graph", graph);
 
 		Response retResponse;
-		try {
-			if (sepaClient == null) {
-				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-						JOptionPane.INFORMATION_MESSAGE);
-				return;
-			}
+//		try {
+//			if (sepaClient == null) {
+//				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//						JOptionPane.INFORMATION_MESSAGE);
+//				return;
+//			}
 
-			retResponse = sepaClient.query("___DASHBOARD_URI_GRAPH", forced, Integer.parseInt(timeout.getText()),
-					Integer.parseInt(nRetry.getText()));
+			retResponse = sepaClient.uriGraph(forced);
 			if (retResponse.isError()) {
 				logger.error(retResponse);
 			} else {
@@ -264,11 +246,11 @@ public class Explorer {
 					tableInstancePropertiesDataModel.addRow(valueBindings);
 				}
 			}
-		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
-			logger.error(e1.getMessage());
-			if (logger.isTraceEnabled())
-				e1.printStackTrace();
-		}
+//		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
+//			logger.error(e1.getMessage());
+//			if (logger.isTraceEnabled())
+//				e1.printStackTrace();
+//		}
 	}
 
 	public void onExplorerPropertiesNavigation(MouseEvent e) {
@@ -287,15 +269,14 @@ public class Explorer {
 			forced.addBinding("graph", graph);
 
 			Response retResponse;
-			try {
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
+//			try {
+//				if (sepaClient == null) {
+//					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//							JOptionPane.INFORMATION_MESSAGE);
+//					return;
+//				}
 
-				retResponse = sepaClient.query("___DASHBOARD_URI_GRAPH", forced, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
+				retResponse = sepaClient.uriGraph(forced);
 				if (retResponse.isError()) {
 					logger.error(retResponse);
 				} else {
@@ -311,12 +292,12 @@ public class Explorer {
 						tableInstancePropertiesDataModel.addRow(valueBindings);
 					}
 				}
-			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
-					| SEPABindingsException e1) {
-				logger.error(e1.getMessage());
-				if (logger.isTraceEnabled())
-					e1.printStackTrace();
-			}
+//			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException
+//					| SEPABindingsException e1) {
+//				logger.error(e1.getMessage());
+//				if (logger.isTraceEnabled())
+//					e1.printStackTrace();
+//			}
 		}
 	}
 
@@ -332,15 +313,14 @@ public class Explorer {
 
 		currentSubject.setText("");
 
-		try {
-			if (sepaClient == null) {
-				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-						JOptionPane.INFORMATION_MESSAGE);
-				return;
-			}
+//		try {
+//			if (sepaClient == null) {
+//				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//						JOptionPane.INFORMATION_MESSAGE);
+//				return;
+//			}
 
-			Response retResponse = sepaClient.query("___DASHBOARD_TOP_CLASSES", forced,
-					Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
+			Response retResponse = sepaClient.topClasses(forced);
 
 			if (retResponse.isError()) {
 				logger.error(retResponse);
@@ -356,23 +336,23 @@ public class Explorer {
 					model.insertNodeInto(new DefaultMutableTreeNode(valueBindings), node, node.getChildCount());
 				}
 			}
-		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
-			logger.error(e1.getMessage());
-			if (logger.isTraceEnabled())
-				e1.printStackTrace();
-		}
+//		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
+//			logger.error(e1.getMessage());
+//			if (logger.isTraceEnabled())
+//				e1.printStackTrace();
+//		}
 	}
 
 	public void onExplorerOpenTab(boolean refresh) {
-		if (sepaClient == null) {
-			JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-					JOptionPane.INFORMATION_MESSAGE);
-			graphs.clear();
-			return;
-		}
+//		if (sepaClient == null) {
+//			JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//					JOptionPane.INFORMATION_MESSAGE);
+//			graphs.clear();
+//			return;
+//		}
 
-		try {
-			graphsEndpointLabel.setText(appProfile.getHost());
+//		try {
+			graphsEndpointLabel.setText(sepaClient.getHost());
 
 			if (!refresh && graphs.getRowCount() != 0)
 				return;
@@ -380,8 +360,7 @@ public class Explorer {
 			if (refresh)
 				graphs.clear();
 
-			Response retResponse = sepaClient.query("___DASHBOARD_GRAPHS", null, Integer.parseInt(timeout.getText()),
-					Integer.parseInt(nRetry.getText()));
+			Response retResponse = sepaClient.graphs();
 			if (retResponse.isError()) {
 				logger.error(retResponse);
 			} else {
@@ -390,11 +369,15 @@ public class Explorer {
 					graphs.addRow(bindings.getValue("graph"), Integer.parseInt(bindings.getValue("count")));
 				}
 			}
-		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
-			logger.error(e1.getMessage());
-			if (logger.isTraceEnabled())
-				e1.printStackTrace();
-		}
+//		} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException | SEPABindingsException e1) {
+//			logger.error(e1.getMessage());
+//			if (logger.isTraceEnabled())
+//				e1.printStackTrace();
+//		}
+	}
+
+	public void setSepaClient(DashboadApp sepaClient) {
+		this.sepaClient = sepaClient;
 	}
 
 }

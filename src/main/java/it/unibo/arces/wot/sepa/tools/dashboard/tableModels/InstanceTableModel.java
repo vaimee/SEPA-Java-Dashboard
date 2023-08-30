@@ -1,25 +1,20 @@
 package it.unibo.arces.wot.sepa.tools.dashboard.tableModels;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPAProtocolException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
 import it.unibo.arces.wot.sepa.commons.sparql.Bindings;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermLiteral;
 import it.unibo.arces.wot.sepa.commons.sparql.RDFTermURI;
-import it.unibo.arces.wot.sepa.pattern.GenericClient;
+import it.unibo.arces.wot.sepa.tools.dashboard.DashboadApp;
 
 public class InstanceTableModel extends AbstractTableModel {
 	private static final Logger logger = LogManager.getLogger();
@@ -29,19 +24,14 @@ public class InstanceTableModel extends AbstractTableModel {
 
 	private static final long serialVersionUID = 1L;
 
-	private GenericClient sepaClient;
+	private DashboadApp sepaClient;
 	
-	private JTextField timeout;
-	private JTextField nRetry;
 	private GraphTableModel graphs;
 	private JLabel currentSubject;
 	private JTable graphsTable;
 	
-	public InstanceTableModel(GenericClient sepaClient, JTextField timeout, JTextField nRetry,GraphTableModel graphs, JLabel currentSubject,
+	public InstanceTableModel(GraphTableModel graphs, JLabel currentSubject,
 	 JTable graphsTable) {
-		this.sepaClient = sepaClient;
-		this.timeout = timeout;
-		this.nRetry = nRetry;
 		this.graphs = graphs;
 		this.currentSubject = currentSubject;
 		this.graphsTable = graphsTable;
@@ -102,20 +92,17 @@ public class InstanceTableModel extends AbstractTableModel {
 							JOptionPane.INFORMATION_MESSAGE);
 					return;
 				}
-				sepaClient.update("___DASHBOARD_UPDATE_LITERAL", newBindings, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
+				sepaClient.updateLiteral(newBindings);
 			} else {
 				newBindings.addBinding("object", new RDFTermURI((String) value));
-				if (sepaClient == null) {
-					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-							JOptionPane.INFORMATION_MESSAGE);
-					return;
-				}
-				sepaClient.update("___DASHBOARD_UPDATE_URI", newBindings, Integer.parseInt(timeout.getText()),
-						Integer.parseInt(nRetry.getText()));
+//				if (sepaClient == null) {
+//					JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
+//							JOptionPane.INFORMATION_MESSAGE);
+//					return;
+//				}
+				sepaClient.updateUri(newBindings);
 			}
-		} catch (SEPABindingsException | SEPAProtocolException | SEPASecurityException | IOException
-				| SEPAPropertiesException e) {
+		} catch (SEPABindingsException e) {
 			logger.error(e.getMessage());
 			if (logger.isTraceEnabled())
 				e.printStackTrace();
@@ -135,4 +122,7 @@ public class InstanceTableModel extends AbstractTableModel {
 		rows.add(b);
 	}
 
+	public void setSepaClient(DashboadApp sepaClient) {
+		this.sepaClient = sepaClient;
+	}
 }

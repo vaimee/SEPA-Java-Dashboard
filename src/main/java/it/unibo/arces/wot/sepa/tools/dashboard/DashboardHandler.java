@@ -33,7 +33,6 @@ import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
 import it.unibo.arces.wot.sepa.commons.response.Notification;
 import it.unibo.arces.wot.sepa.commons.sparql.ARBindingsResults;
-import it.unibo.arces.wot.sepa.pattern.GenericClient;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingsRender;
 import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.BindingsTableModel;
 import it.unibo.arces.wot.sepa.tools.dashboard.utils.CopyAction;
@@ -50,7 +49,7 @@ public class DashboardHandler implements ISubscriptionHandler {
 	private HashMap<String, JTable> subscriptionResultsTables = new HashMap<String, JTable>();
 	private JList<String> queryList;
 	private JTextArea querySPARQL;
-	private GenericClient sepaClient;
+	private DashboadApp sepaClient;
 	private JTextField timeout;
 	private JTextField nRetry;
 	private BindingsRender bindingsRender;
@@ -59,13 +58,12 @@ public class DashboardHandler implements ISubscriptionHandler {
 	
 	public DashboardHandler(HashMap<String, BindingsTableModel> subscriptionResultsDM,
 			HashMap<String, JLabel> subscriptionResultsLabels, HashMap<String, JTable> subscriptionResultsTables,
-			JList<String> queryList, JTextArea querySPARQL, GenericClient sepaClient, JTextField timeout, JTextField nRetry,BindingsRender bindingsRender,JTabbedPane subscriptionsPanel, JTabbedPane mainTabs) {
+			JList<String> queryList, JTextArea querySPARQL, JTextField timeout, JTextField nRetry,BindingsRender bindingsRender,JTabbedPane subscriptionsPanel, JTabbedPane mainTabs) {
 		this.subscriptionResultsDM = subscriptionResultsDM;
 		this.subscriptionResultsLabels = subscriptionResultsLabels;
 		this.subscriptionResultsTables = subscriptionResultsTables;
 		this.queryList = queryList;
 		this.querySPARQL = querySPARQL;
-		this.sepaClient = sepaClient;
 		this.timeout = timeout;
 		this.nRetry = nRetry;
 		this.bindingsRender = bindingsRender;
@@ -160,7 +158,7 @@ public class DashboardHandler implements ISubscriptionHandler {
 						}
 					}.start();
 				} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException | SEPAProtocolException
-						| InterruptedException e1) {
+						| InterruptedException | SEPABindingsException e1) {
 					logger.error(e1.getMessage());
 				}
 			}
@@ -207,5 +205,9 @@ public class DashboardHandler implements ISubscriptionHandler {
 			subscriptionResultsLabels.remove(spuid);
 			subscriptionResultsTables.remove(spuid);
 		}
+	}
+	
+	public void setSepaClient(DashboadApp sepaClient) {
+		this.sepaClient = sepaClient;
 	}
 }
