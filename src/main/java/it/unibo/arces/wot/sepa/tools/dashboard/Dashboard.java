@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
@@ -496,7 +497,7 @@ public class Dashboard implements LoginListener {
 
 				if (load) {
 					appProfile = new JSAP(file);
-					appProfile.read(file, true);
+					//appProfile.read(file, true);
 
 					jsapFiles.clear();
 					jsapFiles.add(file);
@@ -516,7 +517,7 @@ public class Dashboard implements LoginListener {
 		}
 
 		try {
-			appProfile.read(getClass().getClassLoader().getResourceAsStream("explorer.jsap"),false);
+			appProfile.read(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("explorer.jsap")),false);
 		} catch (SEPAPropertiesException | SEPASecurityException e2) {
 			logger.error(e2.getMessage());
 			return false;
