@@ -46,6 +46,9 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 
+import it.unibo.arces.wot.sepa.commons.properties.QueryProperties;
+import it.unibo.arces.wot.sepa.commons.properties.SPARQL11Properties;
+import it.unibo.arces.wot.sepa.commons.properties.UpdateProperties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -89,8 +92,6 @@ import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPAProtocolException;
 import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
-import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.QueryHTTPMethod;
-import it.unibo.arces.wot.sepa.commons.protocol.SPARQL11Properties.UpdateHTTPMethod;
 import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
 import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
 import it.unibo.arces.wot.sepa.commons.response.Response;
@@ -516,12 +517,7 @@ public class Dashboard implements LoginListener {
 			}
 		}
 
-		try {
-			appProfile.read(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("explorer.jsap")),false);
-		} catch (SEPAPropertiesException | SEPASecurityException e2) {
-			logger.error(e2.getMessage());
-			return false;
-		}
+		appProfile.read(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("explorer.jsap")),false);
 
 		// Loading namespaces
 		for (String prefix : appProfile.getNamespaces().keySet()) {
@@ -669,8 +665,8 @@ public class Dashboard implements LoginListener {
 					return;
 
 				try {
-					oauth = new OAuthProperties(appProfile.getFileName());
-				} catch (SEPAPropertiesException | SEPASecurityException e1) {
+					oauth = new OAuthProperties(appProfile);
+				} catch (SEPAPropertiesException  e1) {
 					logger.error(e1.getMessage());
 					return;
 				}
@@ -920,7 +916,7 @@ public class Dashboard implements LoginListener {
 		});
 		updateForcedBindings.setDefaultRenderer(String.class, new ForcedBindingsRenderer());
 		updateForcedBindings.registerKeyboardAction(new CopyAction(),
-				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
+				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
 				JComponent.WHEN_FOCUSED);
 		updateForcedBindings.setCellSelectionEnabled(true);
 		updateForcedBindings.getTableHeader().setBackground(Color.WHITE);
@@ -1006,7 +1002,7 @@ public class Dashboard implements LoginListener {
 		});
 		queryForcedBindings.setDefaultRenderer(String.class, new ForcedBindingsRenderer());
 		queryForcedBindings.registerKeyboardAction(new CopyAction(),
-				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
+				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
 				JComponent.WHEN_FOCUSED);
 		queryForcedBindings.setCellSelectionEnabled(true);
 
@@ -1156,7 +1152,7 @@ public class Dashboard implements LoginListener {
 		bindingsResultsTable.setCellSelectionEnabled(true);
 		bindingsResultsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 		bindingsResultsTable.registerKeyboardAction(new CopyAction(),
-				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
+				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
 				JComponent.WHEN_FOCUSED);
 		bindingsResultsTable.getTableHeader().setBackground(Color.WHITE);
 
@@ -1953,9 +1949,9 @@ public class Dashboard implements LoginListener {
 			port = ":" + appProfile.getUpdatePort(id);
 		String url = appProfile.getUpdateProtocolScheme(id) + "://" + appProfile.getUpdateHost(id) + port
 				+ appProfile.getUpdatePath(id);
-		if (appProfile.getUpdateMethod(id).equals(UpdateHTTPMethod.POST))
+		if (appProfile.getUpdateMethod(id).equals(UpdateProperties.UpdateHTTPMethod.POST))
 			updateURL.setText("POST " + url);
-		else if (appProfile.getUpdateMethod(id).equals(UpdateHTTPMethod.URL_ENCODED_POST))
+		else if (appProfile.getUpdateMethod(id).equals(UpdateProperties.UpdateHTTPMethod.URL_ENCODED_POST))
 			updateURL.setText("URL ENCODED POST " + url);
 
 		if (appProfile.getUsingGraphURI(id)!= null) usingGraphURI.setText(appProfile.getUsingGraphURI(id).toString());
@@ -1990,11 +1986,11 @@ public class Dashboard implements LoginListener {
 		String url = appProfile.getQueryProtocolScheme(id) + "://" + appProfile.getQueryHost(id) + port
 				+ appProfile.getQueryPath(id);
 
-		if (appProfile.getQueryMethod(id).equals(QueryHTTPMethod.GET))
+		if (appProfile.getQueryMethod(id).equals(QueryProperties.QueryHTTPMethod.GET))
 			queryURL.setText("GET " + url);
-		else if (appProfile.getQueryMethod(id).equals(QueryHTTPMethod.POST))
+		else if (appProfile.getQueryMethod(id).equals(QueryProperties.QueryHTTPMethod.POST))
 			queryURL.setText("POST " + url);
-		else if (appProfile.getQueryMethod(id).equals(QueryHTTPMethod.URL_ENCODED_POST))
+		else if (appProfile.getQueryMethod(id).equals(QueryProperties.QueryHTTPMethod.URL_ENCODED_POST))
 			queryURL.setText("URL ENCODED POST " + url);
 
 		url = appProfile.getSubscribeProtocol(id).scheme + "://";
