@@ -174,7 +174,7 @@ public class DashboardHandler implements ISubscriptionHandler {
 		bindingsResultsTable.setDefaultRenderer(Object.class, bindingsRender);
 		bindingsResultsTable.setAutoCreateRowSorter(true);
 		bindingsResultsTable.registerKeyboardAction(new CopyAction(),
-				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()),
+				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
 				JComponent.WHEN_FOCUSED);
 		bindingsResultsTable.setCellSelectionEnabled(true);
 
