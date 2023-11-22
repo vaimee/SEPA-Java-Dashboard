@@ -117,7 +117,7 @@ import java.awt.event.ItemEvent;
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
 
-	static final String title = "SEPA Dashboard Ver 0.9.99";
+	static final String title = "SEPA Dashboard Ver 0.9.100";
 
 	static Dashboard window;
 
