@@ -37,10 +37,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTable;
-import javax.swing.ToolTipManager;
+import javax.swing.*;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
@@ -51,23 +48,17 @@ import it.unibo.arces.wot.sepa.commons.properties.UpdateProperties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.swing.JPanel;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
-import javax.swing.JScrollPane;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.Vector;
 
-import javax.swing.JTabbedPane;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import javax.swing.JSplitPane;
 
 import it.unibo.arces.wot.sepa.pattern.JSAP;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingValue;
@@ -103,27 +94,17 @@ import it.unibo.arces.wot.sepa.commons.sparql.RDFTermURI;
 
 import java.awt.event.KeyEvent;
 
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.border.LineBorder;
-import javax.swing.KeyStroke;
-import javax.swing.UIManager;
 import java.awt.Panel;
 import java.awt.Rectangle;
 
-import javax.swing.JList;
-import javax.swing.JOptionPane;
-import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.ListSelectionEvent;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import java.awt.event.ComponentAdapter;
@@ -136,7 +117,7 @@ import java.awt.event.ItemEvent;
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
 
-	static final String title = "SEPA Dashboard Ver 0.9.99";
+	static final String title = "SEPA Dashboard Ver 0.9.100";
 
 	static Dashboard window;
 
@@ -145,32 +126,23 @@ public class Dashboard implements LoginListener {
 	private JSAP appProfile = null;
 	private Properties appProperties = new Properties();
 	private OAuthProperties oauth = null;
-//	private ClientSecurityManager sm;
-
 	private DefaultTableModel namespacesDM;
 	private String namespacesHeader[] = new String[] { "Prefix", "URI" };
-
 	private BindingsTableModel bindingsDM = new BindingsTableModel();
 	private BindingsRender bindingsRender = new BindingsRender();
 	private InstanceTableModel tableInstancePropertiesDataModel;
 	private GraphTableModel graphs = new GraphTableModel();
-
 	private ForcedBindingsTableModel updateForcedBindingsDM = new ForcedBindingsTableModel();
 	private ForcedBindingsTableModel subscribeForcedBindingsDM = new ForcedBindingsTableModel();
-
 	private SortedListModel updateListDM = new SortedListModel();
 	private SortedListModel queryListDM = new SortedListModel();
 	private SortedListModel jsapListDM = new SortedListModel();
-
 	private HashMap<String, BindingsTableModel> subscriptionResultsDM = new HashMap<String, BindingsTableModel>();
 	private HashMap<String, JLabel> subscriptionResultsLabels = new HashMap<String, JLabel>();
 	private HashMap<String, JTable> subscriptionResultsTables = new HashMap<String, JTable>();
-
 	private DefaultTableModel propertiesDM;
 	private String propertiesHeader[] = new String[] { "Property", "Domain", "Range", "Comment" };
-
 	private JFrame frmSepaDashboard;
-
 	private JTable namespacesTable;
 	private JTable bindingsResultsTable;
 	private JTable updateForcedBindings;
