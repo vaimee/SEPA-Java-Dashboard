@@ -28,7 +28,8 @@ public class BindingsTableModel extends AbstractTableModel {
 		super.fireTableDataChanged();
 	}
 
-	public void setResults(HashMap<String, JTable> subscriptionResultsTables,ARBindingsResults res, String spuid) throws SEPABindingsException {
+	public void setResults(HashMap<String, JTable> subscriptionResultsTables, ARBindingsResults res, String spuid)
+			throws SEPABindingsException {
 		if (res == null)
 			return;
 
@@ -48,8 +49,7 @@ public class BindingsTableModel extends AbstractTableModel {
 			for (Bindings sol : res.getRemovedBindings().getBindings()) {
 				HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
 				for (String var : sol.getVariables()) {
-					row.put(var,
-							new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), false));
+					row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), false));
 				}
 				rows.add(row);
 			}
@@ -59,15 +59,14 @@ public class BindingsTableModel extends AbstractTableModel {
 			for (Bindings sol : res.getAddedBindings().getBindings()) {
 				HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
 				for (String var : sol.getVariables()) {
-					row.put(var,
-							new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
+					row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
 				}
 				rows.add(row);
 			}
 		}
 
-		subscriptionResultsTables.get(spuid).changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1,
-				0, false, false);
+		subscriptionResultsTables.get(spuid).changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1, 0,
+				false, false);
 
 		super.fireTableDataChanged();
 	}
@@ -125,11 +124,16 @@ public class BindingsTableModel extends AbstractTableModel {
 		super.removeTableModelListener(l);
 	}
 
-	public void setAddedResults(HashMap<String, JTable> subscriptionResultsTables,BindingsResults bindingsResults, String spuid) throws SEPABindingsException {
+	public void setAddedResults(HashMap<String, JTable> subscriptionResultsTables, BindingsResults bindingsResults,
+			String spuid) throws SEPABindingsException {
 		if (bindingsResults == null)
 			return;
 
 		ArrayList<String> vars = bindingsResults.getVariables();
+
+		if (bindingsResults.isAskResult()) {
+			vars.add("boolean");
+		}
 
 		if (!columns.containsAll(vars) || columns.size() != vars.size()) {
 			columns.clear();
@@ -137,17 +141,23 @@ public class BindingsTableModel extends AbstractTableModel {
 			super.fireTableStructureChanged();
 		}
 
-		for (Bindings sol : bindingsResults.getBindings()) {
+		if (bindingsResults.isAskResult()) {
 			HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
-			for (String var : sol.getVariables()) {
-				row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
-			}
+			row.put("boolean",
+					new BindingValue(bindingsResults.getAskBoolean() ? "true" : "false", true, "xsd:boolean", true));
 			rows.add(row);
-		}
+		} else
+			for (Bindings sol : bindingsResults.getBindings()) {
+				HashMap<String, BindingValue> row = new HashMap<String, BindingValue>();
+				for (String var : sol.getVariables()) {
+					row.put(var, new BindingValue(sol.getValue(var), sol.isLiteral(var), sol.getDatatype(var), true));
+				}
+				rows.add(row);
+			}
 
 		if (subscriptionResultsTables.get(spuid) != null)
-			subscriptionResultsTables.get(spuid)
-					.changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1, 0, false, false);
+			subscriptionResultsTables.get(spuid).changeSelection(subscriptionResultsTables.get(spuid).getRowCount() - 1,
+					0, false, false);
 
 		super.fireTableDataChanged();
 	}

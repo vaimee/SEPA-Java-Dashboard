@@ -9,12 +9,12 @@
 		"protocol": "http",
 		"port": 8000,
 		"query": {
-			"path": "/query",
+			"path": "/sparql",
 			"method": "POST",
 			"format": "JSON"
 		},
 		"update": {
-			"path": "/update",
+			"path": "/sparql",
 			"method": "POST",
 			"format": "JSON"
 		}
@@ -25,11 +25,13 @@
 		"availableProtocols": {
 			"ws": {
 				"port": 9000,
-				"path": "/subscribe"
+				"path": "/subscribe",
+				"scheme" : "ws"
 			},
 			"wss": {
 				"port": 9443,
-				"path": "/secure/subscribe"
+				"path": "/secure/subscribe",
+				"scheme" : "wss"
 			}
 		}
 	},
