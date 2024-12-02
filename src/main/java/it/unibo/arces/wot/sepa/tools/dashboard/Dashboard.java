@@ -56,7 +56,6 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.*;
 
-@SuppressWarnings("ALL")
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
 
