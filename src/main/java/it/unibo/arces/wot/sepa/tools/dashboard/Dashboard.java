@@ -18,48 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package it.unibo.arces.wot.sepa.tools.dashboard;
 
-import java.awt.Color;
-import java.awt.EventQueue;
-import java.awt.Font;
-import java.awt.GridBagLayout;
-import java.awt.GridBagConstraints;
-import java.awt.Insets;
-import java.awt.Toolkit;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-
-import javax.swing.*;
-import javax.swing.event.TableModelListener;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
-import javax.swing.table.TableRowSorter;
-
+import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
+import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
+import it.unibo.arces.wot.sepa.commons.exceptions.SEPAProtocolException;
+import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
 import it.unibo.arces.wot.sepa.commons.properties.QueryProperties;
 import it.unibo.arces.wot.sepa.commons.properties.UpdateProperties;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Properties;
-import java.util.Vector;
-
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-
+import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
+import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
+import it.unibo.arces.wot.sepa.commons.response.Response;
+import it.unibo.arces.wot.sepa.commons.security.OAuthProperties;
+import it.unibo.arces.wot.sepa.commons.sparql.*;
+import it.unibo.arces.wot.sepa.logging.Logging;
 import it.unibo.arces.wot.sepa.pattern.JSAP;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingValue;
 import it.unibo.arces.wot.sepa.tools.dashboard.bindings.BindingsRender;
@@ -67,53 +37,26 @@ import it.unibo.arces.wot.sepa.tools.dashboard.bindings.ForcedBindingsRenderer;
 import it.unibo.arces.wot.sepa.tools.dashboard.explorer.Explorer;
 import it.unibo.arces.wot.sepa.tools.dashboard.explorer.ExplorerTreeModel;
 import it.unibo.arces.wot.sepa.tools.dashboard.explorer.ExplorerTreeRenderer;
-import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.BindingsTableModel;
-import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.ForcedBindingsTableModel;
-import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.GraphTableModel;
-import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.InstanceTableModel;
-import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.SortedListModel;
-import it.unibo.arces.wot.sepa.tools.dashboard.utils.CopyAction;
-import it.unibo.arces.wot.sepa.tools.dashboard.utils.Login;
-import it.unibo.arces.wot.sepa.tools.dashboard.utils.LoginListener;
-import it.unibo.arces.wot.sepa.tools.dashboard.utils.Register;
-import it.unibo.arces.wot.sepa.tools.dashboard.utils.TextAreaAppender;
-import it.unibo.arces.wot.sepa.tools.dashboard.utils.Utilities;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPABindingsException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPAPropertiesException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPAProtocolException;
-import it.unibo.arces.wot.sepa.commons.exceptions.SEPASecurityException;
-import it.unibo.arces.wot.sepa.commons.response.ErrorResponse;
-import it.unibo.arces.wot.sepa.commons.response.QueryResponse;
-import it.unibo.arces.wot.sepa.commons.response.Response;
-import it.unibo.arces.wot.sepa.commons.security.OAuthProperties;
-import it.unibo.arces.wot.sepa.commons.sparql.Bindings;
-import it.unibo.arces.wot.sepa.commons.sparql.RDFTerm;
-import it.unibo.arces.wot.sepa.commons.sparql.RDFTermBNode;
-import it.unibo.arces.wot.sepa.commons.sparql.RDFTermLiteral;
-import it.unibo.arces.wot.sepa.commons.sparql.RDFTermURI;
+import it.unibo.arces.wot.sepa.tools.dashboard.tableModels.*;
+import it.unibo.arces.wot.sepa.tools.dashboard.utils.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.awt.event.KeyEvent;
-
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ChangeEvent;
+import javax.swing.*;
 import javax.swing.border.LineBorder;
-import java.awt.Panel;
-import java.awt.Rectangle;
-
-import javax.swing.event.ListSelectionListener;
-import javax.swing.event.TableModelEvent;
-import javax.swing.event.ListSelectionEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import javax.swing.event.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 import javax.swing.tree.DefaultMutableTreeNode;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.net.URISyntaxException;
+import java.time.Instant;
+import java.util.*;
 
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import javax.swing.event.TreeSelectionListener;
-import javax.swing.event.TreeSelectionEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.ItemEvent;
-
+@SuppressWarnings("ALL")
 public class Dashboard implements LoginListener {
 	private static final Logger logger = LogManager.getLogger();
 
@@ -127,28 +70,25 @@ public class Dashboard implements LoginListener {
 	private Properties appProperties = new Properties();
 	private OAuthProperties oauth = null;
 	private DefaultTableModel namespacesDM;
-	private String namespacesHeader[] = new String[] { "Prefix", "URI" };
-	private BindingsTableModel bindingsDM = new BindingsTableModel();
-	private BindingsRender bindingsRender = new BindingsRender();
+	private final String[] namespacesHeader = new String[] { "Prefix", "URI" };
+	private final BindingsTableModel bindingsDM = new BindingsTableModel();
+	private final BindingsRender bindingsRender = new BindingsRender();
 	private InstanceTableModel tableInstancePropertiesDataModel;
-	private GraphTableModel graphs = new GraphTableModel();
-	private ForcedBindingsTableModel updateForcedBindingsDM = new ForcedBindingsTableModel();
-	private ForcedBindingsTableModel subscribeForcedBindingsDM = new ForcedBindingsTableModel();
-	private SortedListModel updateListDM = new SortedListModel();
-	private SortedListModel queryListDM = new SortedListModel();
-	private SortedListModel jsapListDM = new SortedListModel();
-	private HashMap<String, BindingsTableModel> subscriptionResultsDM = new HashMap<String, BindingsTableModel>();
-	private HashMap<String, JLabel> subscriptionResultsLabels = new HashMap<String, JLabel>();
-	private HashMap<String, JTable> subscriptionResultsTables = new HashMap<String, JTable>();
-	private DefaultTableModel propertiesDM;
-	private String propertiesHeader[] = new String[] { "Property", "Domain", "Range", "Comment" };
+	private final GraphTableModel graphs = new GraphTableModel();
+	private final ForcedBindingsTableModel updateForcedBindingsDM = new ForcedBindingsTableModel();
+	private final ForcedBindingsTableModel subscribeForcedBindingsDM = new ForcedBindingsTableModel();
+	private final SortedListModel updateListDM = new SortedListModel();
+	private final SortedListModel queryListDM = new SortedListModel();
+	private final SortedListModel jsapListDM = new SortedListModel();
+	private final HashMap<String, BindingsTableModel> subscriptionResultsDM = new HashMap<>();
+	private final HashMap<String, JLabel> subscriptionResultsLabels = new HashMap<>();
+	private final HashMap<String, JTable> subscriptionResultsTables = new HashMap<>();
+	private final String[] propertiesHeader = new String[] { "Property", "Domain", "Range", "Comment" };
 	private JFrame frmSepaDashboard;
-	private JTable namespacesTable;
 	private JTable bindingsResultsTable;
 	private JTable updateForcedBindings;
 	private JTable queryForcedBindings;
 	private JLabel usingGraphURI;
-	private JLabel lblProperties;
 
 	private String updateID;
 	private String queryID;
@@ -158,22 +98,18 @@ public class Dashboard implements LoginListener {
 
 	private JTextArea textArea;
 
-	private JTabbedPane subscriptionsPanel = new JTabbedPane(JTabbedPane.TOP);
+	private final JTabbedPane subscriptionsPanel = new JTabbedPane(JTabbedPane.TOP);
 
 	private Login login = null;
 
-	private ArrayList<String> jsapFiles = new ArrayList<String>();
+	private final ArrayList<String> jsapFiles = new ArrayList<>();
 
 	private JTree explorerTree;
-	private JTable tableInstanceProperties;
-	private ArrayList<RDFTerm> navStack = new ArrayList<RDFTerm>();
+	private final ArrayList<RDFTerm> navStack = new ArrayList<>();
 
-	private JLabel currentSubject;
 	private JTable graphsTable;
-	private JButton buttonStackBackward;
 	private JCheckBox chckbxDatatype;
 	private JCheckBox chckbxQname;
-	private JLabel graphsEndpointLabel;
 
 	private Explorer explorer;
 
@@ -278,7 +214,7 @@ public class Dashboard implements LoginListener {
 	GridBagConstraints gbc_query = new GridBagConstraints();
 	GridBagConstraints gbc_panel_6 = new GridBagConstraints();
 	GridBagConstraints gbc_updateButton = new GridBagConstraints();
-	GridBagConstraints gbc_udpdateInfo = new GridBagConstraints();
+	GridBagConstraints gbc_updateInfo = new GridBagConstraints();
 	GridBagConstraints gbc_lblToms = new GridBagConstraints();
 	GridBagConstraints gbc_lblNewLabel_2 = new GridBagConstraints();
 	GridBagConstraints gbc_timeout = new GridBagConstraints();
@@ -330,52 +266,38 @@ public class Dashboard implements LoginListener {
 
 	JButton btnClean = new JButton("Clear log");
 	GridBagConstraints gbc_btnClean = new GridBagConstraints();
-	GridBagConstraints gbc_chckbxDatatype = new GridBagConstraints();
-	GridBagConstraints gbc_chckbxQname = new GridBagConstraints();
+	GridBagConstraints gbc_chkboxDatatype = new GridBagConstraints();
+	GridBagConstraints gbc_checkboxQname = new GridBagConstraints();
 
 	JButton btnNewButton_3 = new JButton("CSV");
 	GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
 
 	GridBagConstraints gbc_scrollPane_5 = new GridBagConstraints();
-	GridBagConstraints gbc_chckbxNewCheckBox = new GridBagConstraints();
+	GridBagConstraints gbc_checkboxNewCheckBox = new GridBagConstraints();
 
-	JCheckBox chckbxNewCheckBox = new JCheckBox("Hide console");
+	JCheckBox hideConsoleCheckBox = new JCheckBox("Hide console");
 	JButton btnRefresh = new JButton("Refresh");
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					window = new Dashboard();
-					window.frmSepaDashboard.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-					System.exit(-1);
-				}
-			}
-		});
+		EventQueue.invokeLater(() -> {
+            try {
+                window = new Dashboard();
+                window.frmSepaDashboard.setVisible(true);
+            } catch (Exception e) {
+                Logging.logger.error(e.getMessage());
+                System.exit(-1);
+            }
+        });
 	}
 
 	/**
 	 * Create the application.
-	 * 
-	 * @throws SEPAPropertiesException
-	 * @throws SEPASecurityException
-	 * @throws URISyntaxException
-	 * 
-	 * @throws BadPaddingException
-	 * @throws IllegalBlockSizeException
-	 * @throws NoSuchPaddingException
-	 * @throws ClassCastException
-	 * @throws NullPointerException
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 * @throws IllegalArgumentException
+	 *
 	 */
-	public Dashboard() throws SEPAPropertiesException, SEPASecurityException, URISyntaxException {
+	public Dashboard() {
 		initialize();
 
 		loadJSAP(null, true);
@@ -438,14 +360,14 @@ public class Dashboard implements LoginListener {
 			String[] jsaps = path.split(",");
 			jsapListDM.clear();
 
-			for (int i = 0; i < jsaps.length; i++) {
-				jsapFiles.add(jsaps[i]);
-				jsapListDM.add(jsaps[i]);
-			}
+            for (String jsap : jsaps) {
+                jsapFiles.add(jsap);
+                jsapListDM.add(jsap);
+            }
 
 			try {
 				appProfile = new JSAP(jsapFiles.get(0));
-			} catch (SEPAPropertiesException | SEPASecurityException e) {
+			} catch (SEPAPropertiesException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
@@ -453,7 +375,8 @@ public class Dashboard implements LoginListener {
 			if (jsapFiles.size() > 1) {
 				for (int i = 1; i < jsaps.length; i++) {
 					try {
-						appProfile.read(jsapFiles.get(i), false);
+						JSAP temp = new JSAP(jsapFiles.get(i));
+						appProfile.merge(temp);
 					} catch (SEPAPropertiesException e) {
 						logger.error(e.getMessage());
 					}
@@ -478,21 +401,23 @@ public class Dashboard implements LoginListener {
 					jsapListDM.add(file);
 
 				} else if (appProfile != null) {
-					appProfile.read(file, false);
+					JSAP temp = new JSAP(file);
+					appProfile.merge(temp);
 					jsapFiles.add(file);
 					jsapListDM.add(file);
 				}
-			} catch (SEPAPropertiesException | SEPASecurityException e) {
+			} catch (SEPAPropertiesException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
 		}
 
-		appProfile.read(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("explorer.jsap")), false);
+        assert appProfile != null;
+        appProfile.read(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("explorer.jsap"))), false);
 
 		// Loading namespaces
 		for (String prefix : appProfile.getNamespaces().keySet()) {
-			Vector<String> row = new Vector<String>();
+			Vector<String> row = new Vector<>();
 			row.add(prefix);
 			row.addElement(appProfile.getNamespaces().get(prefix));
 			namespacesDM.addRow(row);
@@ -520,13 +445,7 @@ public class Dashboard implements LoginListener {
 			login = new Login(appProfile.getAuthenticationProperties(), this, frmSepaDashboard);// ,clientIDString,clientSecretString);
 			login.setVisible(true);
 		} else {
-//			try {
 			onLogin("ვაიმეე");
-			// sepaClient = new GenericClient(appProfile, handler);
-//			} catch (SEPAProtocolException | SEPASecurityException | SEPAPropertiesException e) {
-//				logger.error(e.getMessage());
-//				return false;
-//			}
 		}
 
 		return true;
@@ -546,7 +465,7 @@ public class Dashboard implements LoginListener {
 		};
 		namespacesDM.setColumnIdentifiers(namespacesHeader);
 
-		propertiesDM = new DefaultTableModel(0, 0) {
+		DefaultTableModel propertiesDM = new DefaultTableModel(0, 0) {
 			private static final long serialVersionUID = -5161490469556412655L;
 
 			@Override
@@ -556,8 +475,8 @@ public class Dashboard implements LoginListener {
 		};
 		propertiesDM.setColumnIdentifiers(propertiesHeader);
 
-		updateList = new JList<String>();
-		queryList = new JList<String>();
+		updateList = new JList<>();
+		queryList = new JList<>();
 
 		frmSepaDashboard = new JFrame();
 		frmSepaDashboard.setFont(new Font("Montserrat", Font.BOLD, 10));
@@ -644,7 +563,6 @@ public class Dashboard implements LoginListener {
 				String clientId = oauth.getClientRegistrationId();
 				String username = oauth.getUsername();
 				String token = oauth.getInitialAccessToken();
-				;
 
 				Register dialog = new Register(oauth, frmSepaDashboard, (clientId != null ? clientId : ""),
 						(username != null ? username : ""), (token != null ? token : ""));
@@ -652,15 +570,13 @@ public class Dashboard implements LoginListener {
 			}
 		});
 
-		btnLoadXmlProfile.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				try {
-					onLoadJSAPButton();
-				} catch (SEPASecurityException | URISyntaxException e1) {
-					logger.error(e1.getMessage());
-				}
-			}
-		});
+		btnLoadXmlProfile.addActionListener(e -> {
+            try {
+                onLoadJSAPButton();
+            } catch (SEPASecurityException | URISyntaxException e1) {
+                logger.error(e1.getMessage());
+            }
+        });
 
 		mainTabs.setFont(new Font("Montserrat", Font.PLAIN, 13));
 
@@ -838,15 +754,13 @@ public class Dashboard implements LoginListener {
 		panel_2.add(scrollPane, gbc_scrollPane);
 
 		updateList.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		updateList.addListSelectionListener(new ListSelectionListener() {
-			public void valueChanged(ListSelectionEvent e) {
-				try {
-					selectUpdateID(updateList.getSelectedValue());
-				} catch (SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-				}
-			}
-		});
+		updateList.addListSelectionListener(e -> {
+            try {
+                selectUpdateID(updateList.getSelectedValue());
+            } catch (SEPABindingsException e1) {
+                logger.error(e1.getMessage());
+            }
+        });
 		updateList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		updateList.setModel(updateListDM);
 		scrollPane.setViewportView(updateList);
@@ -878,13 +792,7 @@ public class Dashboard implements LoginListener {
 		updateForcedBindings.setRowSelectionAllowed(false);
 		updateForcedBindings.setFillsViewportHeight(true);
 		scrollPane_2.setViewportView(updateForcedBindings);
-		updateForcedBindings.getModel().addTableModelListener(new TableModelListener() {
-			@Override
-			public void tableChanged(TableModelEvent e) {
-				enableUpdateButton();
-			}
-
-		});
+		updateForcedBindings.getModel().addTableModelListener(e -> enableUpdateButton());
 		updateForcedBindings.setDefaultRenderer(String.class, new ForcedBindingsRenderer());
 		updateForcedBindings.registerKeyboardAction(new CopyAction(),
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
@@ -925,15 +833,13 @@ public class Dashboard implements LoginListener {
 		panel_4.add(scrollPane_1, gbc_scrollPane_1);
 
 		queryList.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		queryList.addListSelectionListener(new ListSelectionListener() {
-			public void valueChanged(ListSelectionEvent e) {
-				try {
-					selectQueryID(queryList.getSelectedValue());
-				} catch (SEPABindingsException e1) {
-					logger.error(e1.getMessage());
-				}
-			}
-		});
+		queryList.addListSelectionListener(e -> {
+            try {
+                selectQueryID(queryList.getSelectedValue());
+            } catch (SEPABindingsException e1) {
+                logger.error(e1.getMessage());
+            }
+        });
 		queryList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		queryList.setModel(queryListDM);
 		scrollPane_1.setViewportView(queryList);
@@ -965,12 +871,7 @@ public class Dashboard implements LoginListener {
 		queryForcedBindings.getTableHeader().setBackground(Color.WHITE);
 		queryForcedBindings.setFillsViewportHeight(true);
 		scrollPane_3.setViewportView(queryForcedBindings);
-		queryForcedBindings.getModel().addTableModelListener(new TableModelListener() {
-			@Override
-			public void tableChanged(TableModelEvent e) {
-				enableQueryButton();
-			}
-		});
+		queryForcedBindings.getModel().addTableModelListener(e -> enableQueryButton());
 		queryForcedBindings.setDefaultRenderer(String.class, new ForcedBindingsRenderer());
 		queryForcedBindings.registerKeyboardAction(new CopyAction(),
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
@@ -1016,22 +917,18 @@ public class Dashboard implements LoginListener {
 		gbc_updateButton.gridx = 0;
 		gbc_updateButton.gridy = 0;
 		panel_6.add(updateButton, gbc_updateButton);
-		updateButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				onUpdateButton();
-			}
-		});
+		updateButton.addActionListener(e -> onUpdateButton());
 		updateButton.setForeground(Color.BLACK);
 		updateButton.setEnabled(false);
 
 		updateInfo.setFont(new Font("Montserrat", Font.BOLD, 11));
 
-		gbc_udpdateInfo.insets = new Insets(0, 0, 0, 5);
-		gbc_udpdateInfo.fill = GridBagConstraints.VERTICAL;
-		gbc_udpdateInfo.anchor = GridBagConstraints.WEST;
-		gbc_udpdateInfo.gridx = 1;
-		gbc_udpdateInfo.gridy = 0;
-		panel_6.add(updateInfo, gbc_udpdateInfo);
+		gbc_updateInfo.insets = new Insets(0, 0, 0, 5);
+		gbc_updateInfo.fill = GridBagConstraints.VERTICAL;
+		gbc_updateInfo.anchor = GridBagConstraints.WEST;
+		gbc_updateInfo.gridx = 1;
+		gbc_updateInfo.gridy = 0;
+		panel_6.add(updateInfo, gbc_updateInfo);
 
 		gbc_lblToms.insets = new Insets(0, 0, 0, 5);
 		gbc_lblToms.gridx = 2;
@@ -1077,11 +974,7 @@ public class Dashboard implements LoginListener {
 
 		btnQuery.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnQuery.setEnabled(false);
-		btnQuery.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				onQueryButton();
-			}
-		});
+		btnQuery.addActionListener(e -> onQueryButton());
 		gbc_btnQuery.anchor = GridBagConstraints.WEST;
 		gbc_btnQuery.insets = new Insets(0, 0, 0, 5);
 		gbc_btnQuery.gridx = 0;
@@ -1101,11 +994,7 @@ public class Dashboard implements LoginListener {
 		gbc_subscribeButton.gridx = 2;
 		gbc_subscribeButton.gridy = 0;
 		panel_7.add(subscribeButton, gbc_subscribeButton);
-		subscribeButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				onSubscribeButton();
-			}
-		});
+		subscribeButton.addActionListener(e -> onSubscribeButton());
 		subscribeButton.setForeground(Color.BLACK);
 		subscribeButton.setEnabled(false);
 
@@ -1148,7 +1037,7 @@ public class Dashboard implements LoginListener {
 		gbc_scrollPane_4.gridy = 0;
 		namespaces.add(scrollPane_4, gbc_scrollPane_4);
 
-		namespacesTable = new JTable(namespacesDM);
+		JTable namespacesTable = new JTable(namespacesDM);
 		namespacesTable.setFont(new Font("Montserrat", Font.PLAIN, 13));
 		namespacesTable.getTableHeader().setBackground(Color.WHITE);
 		scrollPane_4.setViewportView(namespacesTable);
@@ -1161,7 +1050,7 @@ public class Dashboard implements LoginListener {
 		gbl_explorerPanel.rowWeights = new double[] { 0.0, 0.0, 1.0, 1.0, Double.MIN_VALUE };
 		explorerPanel.setLayout(gbl_explorerPanel);
 
-		graphsEndpointLabel = new JLabel("Endpoint");
+		JLabel graphsEndpointLabel = new JLabel("Endpoint");
 		graphsEndpointLabel.setFont(new Font("Montserrat", Font.PLAIN, 13));
 
 		gbc_graphsEndpointLabel.insets = new Insets(5, 0, 5, 5);
@@ -1190,24 +1079,11 @@ public class Dashboard implements LoginListener {
 					if (dialogResult == JOptionPane.YES_OPTION) {
 						Bindings forced = new Bindings();
 						forced.addBinding("graph", new RDFTermURI(graphs.getValueAt(index, 0).toString()));
-//						try {
+
 						Response ret = sepaClient.dropGraph(forced);
-//							if (sepaClient == null) {
-//								JOptionPane.showMessageDialog(null, "You need to sign in first",
-//										"Warning: not authorized", JOptionPane.INFORMATION_MESSAGE);
-//								return;
-//							}
-//							Response ret = sepaClient.update("___DASHBOARD_DROP_GRAPH", forced,
-//									Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 						if (ret.isUpdateResponse()) {
 							graphs.removeRow(graphs.getValueAt(index, 0).toString());
 						}
-//						} catch (SEPAProtocolException | SEPASecurityException | IOException | SEPAPropertiesException
-//								| SEPABindingsException e1) {
-//							logger.error(e1.getMessage());
-//							if (logger.isTraceEnabled())
-//								e1.printStackTrace();
-//						}
 					}
 				}
 			}
@@ -1230,7 +1106,7 @@ public class Dashboard implements LoginListener {
 		graphsTable = new JTable(graphs);
 		graphsTable.setRowSelectionAllowed(false);
 		graphsTable.setFont(new Font("Montserrat", Font.PLAIN, 12));
-		TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(graphsTable.getModel());
+		TableRowSorter<TableModel> sorter = new TableRowSorter<>(graphsTable.getModel());
 
 		graphsTable.setRowSorter(sorter);
 		graphsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -1287,7 +1163,7 @@ public class Dashboard implements LoginListener {
 		gbc_btnRefresh.gridy = 0;
 		panel_1.add(btnRefresh, gbc_btnRefresh);
 
-		currentSubject = new JLabel("uri");
+		JLabel currentSubject = new JLabel("uri");
 
 		gbc_currentSubject.gridwidth = 3;
 		gbc_currentSubject.insets = new Insets(0, 0, 5, 5);
@@ -1295,7 +1171,7 @@ public class Dashboard implements LoginListener {
 		gbc_currentSubject.gridy = 1;
 		panel_1.add(currentSubject, gbc_currentSubject);
 
-		buttonStackBackward = new JButton("Back");
+		JButton buttonStackBackward = new JButton("Back");
 		buttonStackBackward.setFont(new Font("Montserrat Alternates", Font.PLAIN, 11));
 
 		gbc_buttonStackBackward.anchor = GridBagConstraints.WEST;
@@ -1306,7 +1182,7 @@ public class Dashboard implements LoginListener {
 
 		buttonStackBackward.setVisible(false);
 
-		lblProperties = new JLabel(
+		JLabel lblProperties = new JLabel(
 				"Double click on the predicate to follow the URI link or double click on the object to edit it");
 
 		gbc_lblProperties.gridwidth = 4;
@@ -1345,40 +1221,30 @@ public class Dashboard implements LoginListener {
 		btnClean.setFont(new Font("Montserrat", Font.BOLD, 13));
 		btnClean.setForeground(Color.BLACK);
 		btnClean.setBackground(UIManager.getColor("Separator.shadow"));
-		btnClean.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				textArea.setText("");
-				// clear();
-			}
-		});
+		btnClean.addActionListener(e -> {
+            textArea.setText("");
+            // clear();
+        });
 
 		chckbxDatatype = new JCheckBox("Datatype");
 
-		gbc_chckbxDatatype.anchor = GridBagConstraints.EAST;
-		gbc_chckbxDatatype.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxDatatype.gridx = 2;
-		gbc_chckbxDatatype.gridy = 0;
-		panel_9.add(chckbxDatatype, gbc_chckbxDatatype);
+		gbc_chkboxDatatype.anchor = GridBagConstraints.EAST;
+		gbc_chkboxDatatype.insets = new Insets(0, 0, 0, 5);
+		gbc_chkboxDatatype.gridx = 2;
+		gbc_chkboxDatatype.gridy = 0;
+		panel_9.add(chckbxDatatype, gbc_chkboxDatatype);
 		chckbxDatatype.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		chckbxDatatype.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				onDatatypeCheckbox(e);
-			}
-		});
+		chckbxDatatype.addChangeListener(this::onDatatypeCheckbox);
 		chckbxDatatype.setSelected(true);
 		chckbxQname = new JCheckBox("Qname");
 
-		gbc_chckbxQname.anchor = GridBagConstraints.EAST;
-		gbc_chckbxQname.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxQname.gridx = 3;
-		gbc_chckbxQname.gridy = 0;
-		panel_9.add(chckbxQname, gbc_chckbxQname);
+		gbc_checkboxQname.anchor = GridBagConstraints.EAST;
+		gbc_checkboxQname.insets = new Insets(0, 0, 0, 5);
+		gbc_checkboxQname.gridx = 3;
+		gbc_checkboxQname.gridy = 0;
+		panel_9.add(chckbxQname, gbc_checkboxQname);
 		chckbxQname.setFont(new Font("Montserrat", Font.PLAIN, 11));
-		chckbxQname.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-				onQnameCheckbox(e);
-			}
-		});
+		chckbxQname.addChangeListener(this::onQnameCheckbox);
 		chckbxQname.setSelected(true);
 
 		gbc_btnNewButton_3.anchor = GridBagConstraints.SOUTHEAST;
@@ -1400,11 +1266,7 @@ public class Dashboard implements LoginListener {
 		gbc_btnNewButton.gridy = 0;
 		panel_9.add(btnNewButton, gbc_btnNewButton);
 		btnNewButton.setFont(new Font("Montserrat", Font.BOLD, 13));
-		btnNewButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				clear();
-			}
-		});
+		btnNewButton.addActionListener(e -> clear());
 
 		scrollPane_5 = new JScrollPane();
 
@@ -1421,41 +1283,37 @@ public class Dashboard implements LoginListener {
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
 		TextAreaAppender.addAppender(appender, "TextArea");
 
-		chckbxNewCheckBox.addItemListener(new ItemListener() {
-			public void itemStateChanged(ItemEvent e) {
-				if (chckbxNewCheckBox.isSelected()) {
-					scrollPane_5.setVisible(false);
+		hideConsoleCheckBox.addItemListener(e -> {
+            if (hideConsoleCheckBox.isSelected()) {
+                scrollPane_5.setVisible(false);
 
-					Rectangle main = mainTabs.getBounds();
-					main.height += textArea.getHeight();
-					mainTabs.setBounds(main);
+                Rectangle main = mainTabs.getBounds();
+                main.height += textArea.getHeight();
+                mainTabs.setBounds(main);
 
-					Rectangle control = panel_9.getBounds();
-					control.y += textArea.getHeight();
-					panel_9.setBounds(control);
-				} else {
-					scrollPane_5.setVisible(true);
+                Rectangle control = panel_9.getBounds();
+                control.y += textArea.getHeight();
+                panel_9.setBounds(control);
+            } else {
+                scrollPane_5.setVisible(true);
 
-					Rectangle main = mainTabs.getBounds();
-					main.height -= textArea.getHeight();
-					mainTabs.setBounds(main);
+                Rectangle main = mainTabs.getBounds();
+                main.height -= textArea.getHeight();
+                mainTabs.setBounds(main);
 
-					Rectangle control = panel_9.getBounds();
-					control.y -= textArea.getHeight();
-					panel_9.setBounds(control);
-				}
-			}
-		});
-		chckbxNewCheckBox.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
-			}
-		});
+                Rectangle control = panel_9.getBounds();
+                control.y -= textArea.getHeight();
+                panel_9.setBounds(control);
+            }
+        });
+		hideConsoleCheckBox.addChangeListener(e -> {
+        });
 
-		gbc_chckbxNewCheckBox.anchor = GridBagConstraints.WEST;
-		gbc_chckbxNewCheckBox.insets = new Insets(0, 0, 0, 5);
-		gbc_chckbxNewCheckBox.gridx = 0;
-		gbc_chckbxNewCheckBox.gridy = 0;
-		panel_9.add(chckbxNewCheckBox, gbc_chckbxNewCheckBox);
+		gbc_checkboxNewCheckBox.anchor = GridBagConstraints.WEST;
+		gbc_checkboxNewCheckBox.insets = new Insets(0, 0, 0, 5);
+		gbc_checkboxNewCheckBox.gridx = 0;
+		gbc_checkboxNewCheckBox.gridy = 0;
+		panel_9.add(hideConsoleCheckBox, gbc_checkboxNewCheckBox);
 
 		ExplorerTreeRenderer explorerTreeRenderer = new ExplorerTreeRenderer(chckbxQname);
 		explorerTreeRenderer.setNamespaces(namespacesDM);
@@ -1496,97 +1354,77 @@ public class Dashboard implements LoginListener {
 			}
 		});
 
-		explorerTree.addTreeSelectionListener(new TreeSelectionListener() {
-			public void valueChanged(TreeSelectionEvent e) {
-				explorer.onExplorerSelectTreeElement(e);
-			}
-		});
+		explorerTree.addTreeSelectionListener(e -> explorer.onExplorerSelectTreeElement(e));
 
 		tableInstancePropertiesDataModel = new InstanceTableModel(graphs, lblProperties, graphsTable);
-		tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
+		JTable tableInstanceProperties = new JTable(tableInstancePropertiesDataModel);
 		tableInstanceProperties.getTableHeader().setBackground(Color.WHITE);
 		tableInstanceProperties.setFont(new Font("Montserrat", Font.PLAIN, 12));
-		tableInstanceProperties.getModel().addTableModelListener(new TableModelListener() {
+		tableInstanceProperties.getModel().addTableModelListener(e -> {
+            if (e.getFirstRow() == 0)
+                return;
+            logger.debug("Value: " + tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), e.getColumn()));
 
-			public void tableChanged(TableModelEvent e) {
-				if (e.getFirstRow() == 0)
-					return;
-				logger.debug("Value: " + tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), e.getColumn()));
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) explorerTree
+                    .getLastSelectedPathComponent();
+            Bindings nodeInfo = (Bindings) selectedNode.getUserObject();
 
-				DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) explorerTree
-						.getLastSelectedPathComponent();
-				Bindings nodeInfo = (Bindings) selectedNode.getUserObject();
+            String type = (String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 2);
 
-				String type = (String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 2);
+            RDFTerm graph = new RDFTermURI((String) graphs
+                    .getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
 
-				RDFTerm graph = new RDFTermURI((String) graphs
-						.getValueAt(graphsTable.convertRowIndexToModel(graphsTable.getSelectedRow()), 0));
+            RDFTerm subject;
+            try {
+                if (nodeInfo.isURI("instance")) {
+                    subject = new RDFTermURI(nodeInfo.getValue("instance"));
+                } else {
+                    subject = new RDFTermBNode(nodeInfo.getValue("instance"));
+                }
+            } catch (SEPABindingsException e2) {
+                logger.error(e2.getMessage());
+                return;
+            }
 
-				RDFTerm subject;
-				try {
-					if (nodeInfo.isURI("instance")) {
-						subject = new RDFTermURI(nodeInfo.getValue("instance"));
-					} else {
-						subject = new RDFTermBNode(nodeInfo.getValue("instance"));
-					}
-				} catch (SEPABindingsException e2) {
-					logger.error(e2.getMessage());
-					return;
-				}
+            RDFTerm predicate = new RDFTermURI(
+                    (String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 0));
+            RDFTerm object;
 
-				RDFTerm predicate = new RDFTermURI(
-						(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 0));
-				RDFTerm object;
+            Bindings forcedBindings = new Bindings();
+            forcedBindings.addBinding("graph", graph);
+            forcedBindings.addBinding("subject", subject);
+            forcedBindings.addBinding("predicate", predicate);
 
-				Bindings forcedBindings = new Bindings();
-				forcedBindings.addBinding("graph", graph);
-				forcedBindings.addBinding("subject", subject);
-				forcedBindings.addBinding("predicate", predicate);
+            Response ret;
 
-//				try {
-				Response ret = null;
+            if (type == null) {
+                object = new RDFTermLiteral(
+                        (String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
+                forcedBindings.addBinding("object", object);
+                if (subject.isURI())
+                    ret = sepaClient.updateLiteral(forcedBindings);
+                else {
+                    Bindings parentInfo = (Bindings) ((DefaultMutableTreeNode) selectedNode.getParent())
+                            .getUserObject();
+                    String parentClass = parentInfo.getValue("class");
+                    forcedBindings.addBinding("class", new RDFTermURI(parentClass));
+                    ret = sepaClient.updateLiteralBnode(forcedBindings);
+                }
+            } else if (type.equals("URI") || type.equals("BNODE")) {
+                object = new RDFTermURI((String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
+                forcedBindings.addBinding("object", object);
+                ret = sepaClient.updateUri(forcedBindings);
+            } else {
+                object = new RDFTermLiteral(
+                        (String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1), type);
+                forcedBindings.addBinding("object", object);
+                ret = sepaClient.updateLiteral(forcedBindings);
+            }
 
-//					if (sepaClient == null) {
-//						JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-//								JOptionPane.INFORMATION_MESSAGE);
-//						return;
-//					}
+            if (ret.isError())
+                logger.error(ret);
 
-				if (type == null) {
-					object = new RDFTermLiteral(
-							(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
-					forcedBindings.addBinding("object", object);
-					if (subject.isURI())
-						ret = sepaClient.updateLiteral(forcedBindings);
-					else {
-						Bindings parentInfo = (Bindings) ((DefaultMutableTreeNode) selectedNode.getParent())
-								.getUserObject();
-						String parentClass = parentInfo.getValue("class");
-						forcedBindings.addBinding("class", new RDFTermURI(parentClass));
-						ret = sepaClient.updateLiteralBnode(forcedBindings);
-					}
-				} else if (type.equals("URI") || type.equals("BNODE")) {
-					object = new RDFTermURI((String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1));
-					forcedBindings.addBinding("object", object);
-					ret = sepaClient.updateUri(forcedBindings);
-				} else {
-					object = new RDFTermLiteral(
-							(String) tableInstancePropertiesDataModel.getValueAt(e.getFirstRow(), 1), type);
-					forcedBindings.addBinding("object", object);
-					ret = sepaClient.updateLiteral(forcedBindings);
-				}
-
-				if (ret.isError())
-					logger.error(ret);
-
-//				} catch (SEPAProtocolException | SEPASecurityException | IOException | SEPAPropertiesException
-//						| SEPABindingsException e1) {
-//					logger.error(e1.getMessage());
-//					if (logger.isTraceEnabled())
-//						e1.printStackTrace();
-//				}
-			}
-		});
+        });
 		tableInstanceProperties.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -1603,7 +1441,7 @@ public class Dashboard implements LoginListener {
 				queryList, querySPARQL, timeout, nRetry, bindingsRender, subscriptionsPanel, mainTabs);
 	}
 
-	protected void onQnameCheckbox(ChangeEvent e) {
+	protected void onQnameCheckbox(ChangeEvent ignoredE) {
 		bindingsRender.showAsQName(chckbxQname.isSelected());
 		bindingsDM.fireTableDataChanged();
 		for (BindingsTableModel table : subscriptionResultsDM.values()) {
@@ -1635,28 +1473,30 @@ public class Dashboard implements LoginListener {
 				BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
 				// Header
-				String lineString = null;
+				StringBuilder lineString = null;
 				for (int col = 0; col < bindingsResultsTable.getColumnCount(); col++) {
 					String value = bindingsResultsTable.getColumnName(col);
 					if (lineString == null)
-						lineString = value;
+						lineString = new StringBuilder(value);
 					else
-						lineString += "|" + value;
+						lineString.append("|").append(value);
 				}
-				bw.write(lineString);
+                assert lineString != null;
+                bw.write(lineString.toString());
 				bw.newLine();
 
 				for (int row = 0; row < bindingsResultsTable.getRowCount(); row++) {
 					lineString = null;
 					for (int col = 0; col < bindingsResultsTable.getColumnCount(); col++) {
-						String value = (((BindingValue) bindingsResultsTable.getValueAt(row, col) == null ? ""
+						String value = ((bindingsResultsTable.getValueAt(row, col) == null ? ""
 								: ((BindingValue) bindingsResultsTable.getValueAt(row, col)).get()));
 						if (lineString == null)
-							lineString = value;
+							lineString = new StringBuilder(value);
 						else
-							lineString += "|" + value;
+							lineString.append("|").append(value);
 					}
-					bw.write(lineString);
+                    assert lineString != null;
+                    bw.write(lineString.toString());
 					bw.newLine();
 
 				}
@@ -1682,21 +1522,19 @@ public class Dashboard implements LoginListener {
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
 			String fileName = fc.getSelectedFile().getPath();
 
-			if (jsapFiles.contains(fileName)) {
-				jsapFiles.remove(fileName);
-			}
+			jsapFiles.remove(fileName);
 
 			if (loadJSAP(fileName, !chckbxMerge.isSelected())) {
-				String path = "";
+				StringBuilder path = new StringBuilder();
 				for (int i = 0; i < jsapFiles.size(); i++) {
 					if (i == 0)
-						path = jsapFiles.get(i);
+						path = new StringBuilder(jsapFiles.get(i));
 					else
-						path = path + "," + jsapFiles.get(i);
+						path.append(",").append(jsapFiles.get(i));
 				}
 
 				appProperties = new Properties();
-				appProperties.put("appProfile", path);
+				appProperties.put("appProfile", path.toString());
 
 				logger.info("JSAP files: " + path);
 
@@ -1770,9 +1608,9 @@ public class Dashboard implements LoginListener {
 				type = queryForcedBindings.getValueAt(row, 2).toString();
 			String value = queryForcedBindings.getValueAt(row, 1).toString();
 			String variable = queryForcedBindings.getValueAt(row, 0).toString();
-			if (type.toUpperCase().equals("URI"))
+			if (type.equalsIgnoreCase("URI"))
 				bindings.addBinding(variable, new RDFTermURI(value));
-			else if (type.toUpperCase().equals("BNODE"))
+			else if (type.equalsIgnoreCase("BNODE"))
 				bindings.addBinding(variable, new RDFTermBNode(value));
 			else
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
@@ -1799,9 +1637,9 @@ public class Dashboard implements LoginListener {
 
 			if (type == null)
 				bindings.addBinding(variable, new RDFTermLiteral(value));
-			else if (type.toUpperCase().equals("URI"))
+			else if (type.equalsIgnoreCase("URI"))
 				bindings.addBinding(variable, new RDFTermURI(value));
-			else if (type.toUpperCase().equals("BNODE"))
+			else if (type.equalsIgnoreCase("BNODE"))
 				bindings.addBinding(variable, new RDFTermBNode(value));
 			else
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
@@ -1814,19 +1652,9 @@ public class Dashboard implements LoginListener {
 				Integer.parseInt(nRetry.getText()));
 		Instant stop = Instant.now();
 		if (ret.isError()) {
-//				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-//						JOptionPane.INFORMATION_MESSAGE);
-//				return;
 
-			logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
+			logger.error(ret + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 			queryInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
-
-			// Security
-//				ErrorResponse error = (ErrorResponse) ret;
-//				if (error.isTokenExpiredError()) {
-//					sm.refreshToken();
-//					query();
-//				}
 
 		} else {
 			QueryResponse results = (QueryResponse) ret;
@@ -1837,9 +1665,6 @@ public class Dashboard implements LoginListener {
 			bindingsDM.clear();
 			bindingsDM.setAddedResults(subscriptionResultsTables, results.getBindingsResults(), null);
 		}
-//		} catch (NumberFormatException | SEPAProtocolException | SEPASecurityException | IOException e) {
-//			logger.error(e.getMessage());
-//		}
 	}
 
 	protected void update() throws SEPAPropertiesException, SEPABindingsException {
@@ -1855,50 +1680,33 @@ public class Dashboard implements LoginListener {
 
 			if (type == null)
 				bindings.addBinding(variable, new RDFTermLiteral(value));
-			else if (type.toUpperCase().equals("URI"))
+			else if (type.equalsIgnoreCase("URI"))
 				bindings.addBinding(variable, new RDFTermURI(value));
-			else if (type.toUpperCase().equals("BNODE"))
+			else if (type.equalsIgnoreCase("BNODE"))
 				bindings.addBinding(variable, new RDFTermBNode(value));
 			else
 				bindings.addBinding(variable, new RDFTermLiteral(value, type));
 		}
 
-//		try {
 		Instant start = Instant.now();
-
-//			if (sepaClient == null) {
-//				JOptionPane.showMessageDialog(null, "You need to sign in first", "Warning: not authorized",
-//						JOptionPane.INFORMATION_MESSAGE);
-//				return;
-//			}
 
 		Response ret = sepaClient.update(updateID, updateSPARQL.getText(), bindings,
 				Integer.parseInt(timeout.getText()), Integer.parseInt(nRetry.getText()));
 		Instant stop = Instant.now();
 		if (ret.isError()) {
-			logger.error(ret.toString() + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
+			logger.error(ret + String.format(" (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 			updateInfo.setText("Error: " + ((ErrorResponse) ret).getStatusCode());
 
-			// Security
-//				ErrorResponse error = (ErrorResponse) ret;
-//				if (error.isTokenExpiredError()) {
-//					sm.refreshToken();
-//					update();
-//				}
 		} else {
 			logger.info(String.format("Update OK (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 			updateInfo.setText(String.format("Update OK (%d ms)", (stop.toEpochMilli() - start.toEpochMilli())));
 		}
-//		} catch (NumberFormatException | SEPAProtocolException | SEPASecurityException | IOException e) {
-//			logger.error(e.getMessage());
-//		}
 	}
 
 	protected void selectUpdateID(String id) throws SEPABindingsException {
 		if (id == null)
 			return;
 		updateID = id;
-		// JSAP app = sepaClient.getApplicationProfile();
 		updateSPARQL.setText(appProfile.getSPARQLUpdate(id));
 
 		Bindings bindings = appProfile.getUpdateBindings(id);
@@ -1964,7 +1772,7 @@ public class Dashboard implements LoginListener {
 		else if (appProfile.getQueryMethod(id).equals(QueryProperties.QueryHTTPMethod.URL_ENCODED_POST))
 			queryURL.setText("URL ENCODED POST " + url);
 
-		url = appProfile.getSubscribeProtocol(id).scheme + "://";
+		url = appProfile.getSubscribeProtocol(id).getScheme() + "://";
 
 		url += appProfile.getSubscribeHost(id);
 		if (appProfile.getSubscribePort(id) != -1)
@@ -1982,7 +1790,7 @@ public class Dashboard implements LoginListener {
 
 	protected void enableUpdateButton() {
 		updateButton.setEnabled(false);
-		if (updateSPARQL.getText().equals(""))
+		if (updateSPARQL.getText().isEmpty())
 			return;
 		else {
 			for (int row = 0; row < updateForcedBindings.getRowCount(); row++) {
@@ -2000,7 +1808,7 @@ public class Dashboard implements LoginListener {
 	protected void enableQueryButton() {
 		btnQuery.setEnabled(false);
 		subscribeButton.setEnabled(false);
-		if (querySPARQL.getText().equals(""))
+		if (querySPARQL.getText().isEmpty())
 			return;
 		else {
 			for (int row = 0; row < queryForcedBindings.getRowCount(); row++) {
