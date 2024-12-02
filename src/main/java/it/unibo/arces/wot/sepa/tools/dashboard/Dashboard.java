@@ -445,7 +445,7 @@ public class Dashboard implements LoginListener {
 
 			try {
 				appProfile = new JSAP(jsapFiles.get(0));
-			} catch (SEPAPropertiesException | SEPASecurityException e) {
+			} catch (SEPAPropertiesException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
@@ -453,7 +453,8 @@ public class Dashboard implements LoginListener {
 			if (jsapFiles.size() > 1) {
 				for (int i = 1; i < jsaps.length; i++) {
 					try {
-						appProfile.read(jsapFiles.get(i), false);
+						JSAP temp = new JSAP(jsapFiles.get(i));
+						appProfile.merge(temp);
 					} catch (SEPAPropertiesException e) {
 						logger.error(e.getMessage());
 					}
@@ -478,11 +479,12 @@ public class Dashboard implements LoginListener {
 					jsapListDM.add(file);
 
 				} else if (appProfile != null) {
-					appProfile.read(file, false);
+					JSAP temp = new JSAP(file);
+					appProfile.merge(temp);
 					jsapFiles.add(file);
 					jsapListDM.add(file);
 				}
-			} catch (SEPAPropertiesException | SEPASecurityException e) {
+			} catch (SEPAPropertiesException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
@@ -1964,7 +1966,7 @@ public class Dashboard implements LoginListener {
 		else if (appProfile.getQueryMethod(id).equals(QueryProperties.QueryHTTPMethod.URL_ENCODED_POST))
 			queryURL.setText("URL ENCODED POST " + url);
 
-		url = appProfile.getSubscribeProtocol(id).scheme + "://";
+		url = appProfile.getSubscribeProtocol(id).getScheme() + "://";
 
 		url += appProfile.getSubscribeHost(id);
 		if (appProfile.getSubscribePort(id) != -1)
