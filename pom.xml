@@ -3,23 +3,17 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>it.unibo.arces.wot</groupId>
-	<artifactId>sepa.tools.dashboard</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<parent>
+		<groupId>com.vaimee</groupId>
+		<artifactId>sepa</artifactId>
+		<version>${revision}</version>
+	</parent>
+	
+	
+	<artifactId>dashboard</artifactId>
 	<packaging>jar</packaging>
 
-	<name>SepaDashboard</name>
-	<url>http://maven.apache.org</url>
-
-	<properties>
-		<java.version>21</java.version>
-		<maven.compiler.release>21</maven.compiler.release>
-		<maven.compiler.source>21</maven.compiler.source>
-		<maven.compiler.target>21</maven.compiler.target>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>1.0.0-SNAPSHOT</revision>
-		<update>0</update>
-	</properties>
+	<name>dashboard</name>
 
 	<build>
 		<plugins>
@@ -84,61 +78,10 @@
 		</plugins>
 	</build>
 	<dependencies>
-<!--		<dependency>-->
-<!--			<groupId>junit</groupId>-->
-<!--			<artifactId>junit</artifactId>-->
-<!--			<version>4.13.2</version>-->
-<!--			<scope>test</scope>-->
-<!--		</dependency>-->
-<!--		 https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
-<!--		<dependency>-->
-<!--			<groupId>org.apache.logging.log4j</groupId>-->
-<!--			<artifactId>log4j-api</artifactId>-->
-<!--			<version>2.20.0</version>-->
-<!--		</dependency>-->
-<!--		 https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
-<!--		<dependency>-->
-<!--			<groupId>org.apache.logging.log4j</groupId>-->
-<!--			<artifactId>log4j-core</artifactId>-->
-<!--			<version>2.20.0</version>-->
-<!--		</dependency>-->
-<!--		<dependency>-->
-<!--			<groupId>com.google.code.gson</groupId>-->
-<!--			<artifactId>gson</artifactId>-->
-<!--			<version>2.10.1</version>-->
-<!--		</dependency>-->
 		<dependency>
-			<groupId>it.unibo.arces.wot</groupId>
+			<groupId>com.vaimee</groupId>
 			<artifactId>client-api</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>${revision}</version>
 		</dependency>
-<!--		<dependency>-->
-<!--			<groupId>org.apache.jena</groupId>-->
-<!--			<artifactId>apache-jena-libs</artifactId>-->
-<!--			<version>5.0.0</version>-->
-<!--			<type>pom</type>-->
-<!--			<exclusions>-->
-<!--				<exclusion>-->
-<!--					<groupId>org.slf4j</groupId>-->
-<!--					<artifactId>jcl-over-slf4j</artifactId>-->
-<!--				</exclusion>-->
-<!--				<exclusion>-->
-<!--					<groupId>org.slf4j</groupId>-->
-<!--					<artifactId>slf4j-api</artifactId>-->
-<!--				</exclusion>-->
-<!--				<exclusion>-->
-<!--					<groupId>com.fasterxml.jackson.core</groupId>-->
-<!--					<artifactId>jackson-core</artifactId>-->
-<!--				</exclusion>-->
-<!--				<exclusion>-->
-<!--					<groupId>com.fasterxml.jackson.core</groupId>-->
-<!--					<artifactId>jackson-databind</artifactId>-->
-<!--				</exclusion>-->
-<!--				<exclusion>-->
-<!--					<groupId>org.glassfish</groupId>-->
-<!--					<artifactId>jakarta.json</artifactId>-->
-<!--				</exclusion>-->
-<!--			</exclusions>-->
-<!--		</dependency>-->
 	</dependencies>
 </project>

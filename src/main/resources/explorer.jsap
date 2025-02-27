@@ -339,7 +339,14 @@
 			}
 		},
 		"___DASHBOARD_GRAPHS": {
-			"sparql": "SELECT ?graph (COUNT(?s) AS ?count) WHERE {{GRAPH ?graph {?s ?p ?o} } UNION {?s ?p ?o BIND(URI(\"https://sepa.vaimee.com/default/graph\") AS ?graph)}} GROUP BY ?graph",
+			"sparql": "SELECT ?graph (COUNT(?s) as ?count) WHERE {graph ?graph {?s ?p ?o } }  GROUP BY ?graph HAVING (COUNT(?s) < ?max)",
+			"forcedBindings": {
+				"max": {
+					"type": "literal",
+					"value": "1000",
+					"datatype" : "xsd:integer"
+				}
+			},
 			"graphs": {
 				"default-graph-uri": [],
 				"named-graph-uri": []
