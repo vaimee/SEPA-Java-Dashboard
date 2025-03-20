@@ -8,15 +8,14 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
+import com.vaimee.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.commons.exceptions.SEPASecurityException;
+import com.vaimee.commons.response.ErrorResponse;
+import com.vaimee.commons.response.Response;
+import com.vaimee.commons.security.ClientSecurityManager;
+import com.vaimee.commons.security.OAuthProperties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
-import com.vaimee.sepa.commons.response.ErrorResponse;
-import com.vaimee.sepa.commons.response.Response;
-import com.vaimee.sepa.commons.security.ClientSecurityManager;
-import com.vaimee.sepa.commons.security.OAuthProperties;
 
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
@@ -196,6 +195,10 @@ public class Login extends JDialog {
 			logger.error(e1.getMessage());
 			m_listener.onLoginError(new ErrorResponse(401, "not_authorized", e1.getMessage()));
 			return;
-		}
-	}
+		} catch (SEPASecurityException e) {
+            throw new RuntimeException(e);
+        } catch (SEPAPropertiesException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

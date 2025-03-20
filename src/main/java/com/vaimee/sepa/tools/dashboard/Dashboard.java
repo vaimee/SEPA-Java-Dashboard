@@ -18,17 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package com.vaimee.sepa.tools.dashboard;
 
-import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
-import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.sepa.commons.exceptions.SEPAProtocolException;
-import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
-import com.vaimee.sepa.commons.properties.QueryProperties;
-import com.vaimee.sepa.commons.properties.UpdateProperties;
-import com.vaimee.sepa.commons.response.ErrorResponse;
-import com.vaimee.sepa.commons.response.QueryResponse;
-import com.vaimee.sepa.commons.response.Response;
-import com.vaimee.sepa.commons.sparql.*;
-import com.vaimee.sepa.pattern.JSAP;
+import com.vaimee.commons.exceptions.SEPABindingsException;
+import com.vaimee.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.commons.exceptions.SEPAProtocolException;
+import com.vaimee.commons.exceptions.SEPASecurityException;
+import com.vaimee.commons.response.ErrorResponse;
+import com.vaimee.commons.response.QueryResponse;
+import com.vaimee.commons.response.Response;
+import com.vaimee.commons.sparql.*;
+import com.vaimee.pattern.JSAP;
 import com.vaimee.sepa.tools.dashboard.bindings.BindingValue;
 import com.vaimee.sepa.tools.dashboard.bindings.BindingsRender;
 import com.vaimee.sepa.tools.dashboard.bindings.ForcedBindingsRenderer;
@@ -274,7 +272,7 @@ public class Dashboard implements LoginListener {
 	/**
 	 * Create the application.
 	 */
-	public Dashboard() {
+	public Dashboard() throws SEPAPropertiesException, SEPASecurityException {
 		logger = new Logging(textArea);
 		
 		initialize();
@@ -287,7 +285,7 @@ public class Dashboard implements LoginListener {
 		appProperties.load(in);
 	}
 
-	protected boolean loadJSAP(String file, boolean load) {
+	protected boolean loadJSAP(String file, boolean load) throws SEPAPropertiesException, SEPASecurityException {
 		namespacesDM.getDataVector().clear();
 		updateListDM.clear();
 		queryListDM.clear();
@@ -346,7 +344,7 @@ public class Dashboard implements LoginListener {
 
 			try {
 				appProfile = new JSAP("file:///" + jsapFiles.get(0).replaceAll("\\\\", "/"));
-			} catch (SEPAPropertiesException e) {
+			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
@@ -356,7 +354,7 @@ public class Dashboard implements LoginListener {
 					try {
 						JSAP temp = new JSAP("file://" + jsapFiles.get(i).replaceAll("\\\\", "/"));
 						appProfile.merge(temp);
-					} catch (SEPAPropertiesException e) {
+					} catch (SEPAPropertiesException | SEPASecurityException e) {
 						logger.error(e.getMessage());
 					}
 				}
@@ -385,17 +383,15 @@ public class Dashboard implements LoginListener {
 					jsapFiles.add(file);
 					jsapListDM.add(file);
 				}
-			} catch (SEPAPropertiesException e) {
+			} catch (SEPAPropertiesException | SEPASecurityException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
 		}
 
 		assert appProfile != null;
-		appProfile.read(
-				new InputStreamReader(
-						Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("explorer.jsap"))),
-				false);
+		InputStreamReader reader = new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("explorer.jsap")));
+		appProfile.read(reader,false);
 
 		// Loading namespaces
 		for (String prefix : appProfile.getNamespaces().keySet()) {
@@ -494,7 +490,7 @@ public class Dashboard implements LoginListener {
 						btnLoadXmlProfile.addActionListener(e -> {
 							try {
 								onLoadJSAPButton();
-							} catch (SEPASecurityException | URISyntaxException e1) {
+							} catch (SEPASecurityException | URISyntaxException | SEPAPropertiesException e1) {
 								logger.error(e1.getMessage());
 							}
 						});
@@ -1426,7 +1422,7 @@ public class Dashboard implements LoginListener {
 		}
 	}
 
-	protected boolean onLoadJSAPButton() throws SEPASecurityException, URISyntaxException {
+	protected boolean onLoadJSAPButton() throws SEPASecurityException, URISyntaxException, SEPAPropertiesException {
 		String openIn = null;
 		if (appProperties.getProperty("appProfile") != null) {
 			String[] profilePath = appProperties.getProperty("appProfile").split(",");
@@ -1481,7 +1477,7 @@ public class Dashboard implements LoginListener {
 		try {
 			subscribe();
 		} catch (IOException | SEPAPropertiesException | NumberFormatException | SEPAProtocolException
-				| SEPASecurityException | SEPABindingsException | InterruptedException e1) {
+				 | SEPASecurityException | SEPABindingsException | InterruptedException e1) {
 			logger.error(e1.getMessage());
 		}
 	}

@@ -22,17 +22,17 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
+import com.vaimee.api.ISubscriptionHandler;
+import com.vaimee.commons.exceptions.SEPABindingsException;
+import com.vaimee.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.commons.exceptions.SEPAProtocolException;
+import com.vaimee.commons.exceptions.SEPASecurityException;
+import com.vaimee.commons.response.ErrorResponse;
+import com.vaimee.commons.response.Notification;
+import com.vaimee.commons.sparql.ARBindingsResults;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.vaimee.sepa.api.ISubscriptionHandler;
-import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
-import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.sepa.commons.exceptions.SEPAProtocolException;
-import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
-import com.vaimee.sepa.commons.response.ErrorResponse;
-import com.vaimee.sepa.commons.response.Notification;
-import com.vaimee.sepa.commons.sparql.ARBindingsResults;
 import com.vaimee.sepa.tools.dashboard.bindings.BindingsRender;
 import com.vaimee.sepa.tools.dashboard.tableModels.BindingsTableModel;
 import com.vaimee.sepa.tools.dashboard.utils.CopyAction;
@@ -157,8 +157,9 @@ public class DashboardHandler implements ISubscriptionHandler {
 							}
 						}
 					}.start();
-				} catch (NumberFormatException | SEPASecurityException | SEPAPropertiesException | SEPAProtocolException
-						| InterruptedException | SEPABindingsException e1) {
+				} catch (NumberFormatException |
+                         InterruptedException | SEPABindingsException | SEPAProtocolException |
+                         SEPASecurityException | SEPAPropertiesException e1) {
 					logger.error(e1.getMessage());
 				}
 			}
