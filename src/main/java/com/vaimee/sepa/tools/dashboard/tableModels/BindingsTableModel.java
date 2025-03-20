@@ -7,10 +7,10 @@ import javax.swing.JTable;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 
-import com.vaimee.commons.exceptions.SEPABindingsException;
-import com.vaimee.commons.sparql.ARBindingsResults;
-import com.vaimee.commons.sparql.Bindings;
-import com.vaimee.commons.sparql.BindingsResults;
+import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
+import com.vaimee.sepa.commons.sparql.ARBindingsResults;
+import com.vaimee.sepa.commons.sparql.Bindings;
+import com.vaimee.sepa.commons.sparql.BindingsResults;
 import com.vaimee.sepa.tools.dashboard.bindings.BindingValue;
 
 public class BindingsTableModel extends AbstractTableModel {

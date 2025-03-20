@@ -18,15 +18,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package com.vaimee.sepa.tools.dashboard;
 
-import com.vaimee.commons.exceptions.SEPABindingsException;
-import com.vaimee.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.commons.exceptions.SEPAProtocolException;
-import com.vaimee.commons.exceptions.SEPASecurityException;
-import com.vaimee.commons.response.ErrorResponse;
-import com.vaimee.commons.response.QueryResponse;
-import com.vaimee.commons.response.Response;
-import com.vaimee.commons.sparql.*;
-import com.vaimee.pattern.JSAP;
+import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
+import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.sepa.commons.exceptions.SEPAProtocolException;
+import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
+import com.vaimee.sepa.commons.properties.QueryProperties;
+import com.vaimee.sepa.commons.properties.UpdateProperties;
+import com.vaimee.sepa.commons.response.ErrorResponse;
+import com.vaimee.sepa.commons.response.QueryResponse;
+import com.vaimee.sepa.commons.response.Response;
+import com.vaimee.sepa.commons.sparql.*;
+import com.vaimee.sepa.pattern.JSAP;
 import com.vaimee.sepa.tools.dashboard.bindings.BindingValue;
 import com.vaimee.sepa.tools.dashboard.bindings.BindingsRender;
 import com.vaimee.sepa.tools.dashboard.bindings.ForcedBindingsRenderer;
@@ -344,7 +346,7 @@ public class Dashboard implements LoginListener {
 
 			try {
 				appProfile = new JSAP("file:///" + jsapFiles.get(0).replaceAll("\\\\", "/"));
-			} catch (SEPAPropertiesException | SEPASecurityException e) {
+			} catch (SEPAPropertiesException e) {
 				logger.error(e.getMessage());
 				return false;
 			}
@@ -354,7 +356,7 @@ public class Dashboard implements LoginListener {
 					try {
 						JSAP temp = new JSAP("file://" + jsapFiles.get(i).replaceAll("\\\\", "/"));
 						appProfile.merge(temp);
-					} catch (SEPAPropertiesException | SEPASecurityException e) {
+					} catch (SEPAPropertiesException e) {
 						logger.error(e.getMessage());
 					}
 				}
@@ -383,7 +385,7 @@ public class Dashboard implements LoginListener {
 					jsapFiles.add(file);
 					jsapListDM.add(file);
 				}
-			} catch (SEPAPropertiesException | SEPASecurityException e) {
+			} catch (SEPAPropertiesException e) {
 				logger.error(e.getMessage());
 				return false;
 			}

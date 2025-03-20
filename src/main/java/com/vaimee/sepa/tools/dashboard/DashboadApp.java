@@ -1,15 +1,15 @@
 package com.vaimee.sepa.tools.dashboard;
 
-import com.vaimee.commons.exceptions.SEPABindingsException;
-import com.vaimee.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.commons.exceptions.SEPAProtocolException;
-import com.vaimee.commons.exceptions.SEPASecurityException;
-import com.vaimee.commons.response.ErrorResponse;
-import com.vaimee.commons.response.Response;
-import com.vaimee.commons.sparql.Bindings;
-import com.vaimee.commons.sparql.RDFTermLiteral;
-import com.vaimee.pattern.GenericClient;
-import com.vaimee.pattern.JSAP;
+import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
+import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.sepa.commons.exceptions.SEPAProtocolException;
+import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
+import com.vaimee.sepa.commons.response.ErrorResponse;
+import com.vaimee.sepa.commons.response.Response;
+import com.vaimee.sepa.commons.sparql.Bindings;
+import com.vaimee.sepa.commons.sparql.RDFTermLiteral;
+import com.vaimee.sepa.pattern.GenericClient;
+import com.vaimee.sepa.pattern.JSAP;
 
 import java.io.IOException;
 

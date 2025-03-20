@@ -7,10 +7,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 
-import com.vaimee.commons.exceptions.SEPABindingsException;
-import com.vaimee.commons.sparql.Bindings;
-import com.vaimee.commons.sparql.RDFTermLiteral;
-import com.vaimee.commons.sparql.RDFTermURI;
+import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
+import com.vaimee.sepa.commons.sparql.Bindings;
+import com.vaimee.sepa.commons.sparql.RDFTermLiteral;
+import com.vaimee.sepa.commons.sparql.RDFTermURI;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
