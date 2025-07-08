@@ -15,12 +15,12 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 
-import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
-import com.vaimee.sepa.commons.response.QueryResponse;
-import com.vaimee.sepa.commons.response.Response;
-import com.vaimee.sepa.commons.sparql.Bindings;
-import com.vaimee.sepa.commons.sparql.RDFTerm;
-import com.vaimee.sepa.commons.sparql.RDFTermURI;
+import com.vaimee.sepa.api.commons.exceptions.SEPABindingsException;
+import com.vaimee.sepa.api.commons.response.QueryResponse;
+import com.vaimee.sepa.api.commons.response.Response;
+import com.vaimee.sepa.api.commons.sparql.Bindings;
+import com.vaimee.sepa.api.commons.sparql.RDFTerm;
+import com.vaimee.sepa.api.commons.sparql.RDFTermURI;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

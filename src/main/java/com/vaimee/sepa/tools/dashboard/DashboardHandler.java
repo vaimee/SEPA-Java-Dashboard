@@ -23,13 +23,13 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
 import com.vaimee.sepa.api.ISubscriptionHandler;
-import com.vaimee.sepa.commons.exceptions.SEPABindingsException;
-import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.sepa.commons.exceptions.SEPAProtocolException;
-import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
-import com.vaimee.sepa.commons.response.ErrorResponse;
-import com.vaimee.sepa.commons.response.Notification;
-import com.vaimee.sepa.commons.sparql.ARBindingsResults;
+import com.vaimee.sepa.api.commons.exceptions.SEPABindingsException;
+import com.vaimee.sepa.api.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.sepa.api.commons.exceptions.SEPAProtocolException;
+import com.vaimee.sepa.api.commons.exceptions.SEPASecurityException;
+import com.vaimee.sepa.api.commons.response.ErrorResponse;
+import com.vaimee.sepa.api.commons.response.Notification;
+import com.vaimee.sepa.api.commons.sparql.ARBindingsResults;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

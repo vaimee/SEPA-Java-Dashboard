@@ -1,6 +1,6 @@
 package com.vaimee.sepa.tools.dashboard.utils;
 
-import com.vaimee.sepa.commons.response.ErrorResponse;
+import com.vaimee.sepa.api.commons.response.ErrorResponse;
 
 public interface LoginListener {
 	void onLogin(String id);//, String secret,boolean remember);

@@ -8,7 +8,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 
-import com.vaimee.sepa.commons.sparql.Bindings;
+import com.vaimee.sepa.api.commons.sparql.Bindings;
 
 public class ExplorerTreeRenderer extends DefaultTreeCellRenderer {
 	private JCheckBox chckbxQname;

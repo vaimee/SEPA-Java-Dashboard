@@ -11,12 +11,12 @@ import javax.swing.border.EmptyBorder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.vaimee.sepa.commons.exceptions.SEPAPropertiesException;
-import com.vaimee.sepa.commons.exceptions.SEPASecurityException;
-import com.vaimee.sepa.commons.response.RegistrationResponse;
-import com.vaimee.sepa.commons.response.Response;
-import com.vaimee.sepa.commons.security.OAuthProperties;
-import com.vaimee.sepa.commons.security.ClientSecurityManager;
+import com.vaimee.sepa.api.commons.exceptions.SEPAPropertiesException;
+import com.vaimee.sepa.api.commons.exceptions.SEPASecurityException;
+import com.vaimee.sepa.api.commons.response.RegistrationResponse;
+import com.vaimee.sepa.api.commons.response.Response;
+import com.vaimee.sepa.api.commons.security.OAuthProperties;
+import com.vaimee.sepa.api.commons.security.ClientSecurityManager;
 
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
